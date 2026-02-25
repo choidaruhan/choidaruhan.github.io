@@ -1,9 +1,9 @@
-const supabase = supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY);
+const supabaseClient = window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY);
 let currentSession = null;
 
 // 네비게이션 로그인/로그아웃 버튼 세팅
 async function checkAuth() {
-    const { data: { session } } = await supabase.auth.getSession();
+    const { data: { session } } = await supabaseClient.auth.getSession();
     currentSession = session;
 
     const authLinks = document.getElementById('auth-links');
@@ -20,7 +20,7 @@ async function checkAuth() {
 }
 
 window.logout = async function () {
-    await supabase.auth.signOut();
+    await supabaseClient.auth.signOut();
     alert('로그아웃 되었습니다.');
     window.location.reload();
 }
@@ -40,7 +40,7 @@ async function loadHome() {
     showLoading();
     try {
         // posts 테이블에서 id, title, created_at만 가져오기 (작성일 내림차순)
-        const { data: posts, error } = await supabase
+        const { data: posts, error } = await supabaseClient
             .from('posts')
             .select('id, title, created_at')
             .order('created_at', { ascending: false });
@@ -77,7 +77,7 @@ async function loadPost(postId) {
     showLoading();
     try {
         // 특정 id의 포스트 한 개만 가져오기
-        const { data: post, error } = await supabase
+        const { data: post, error } = await supabaseClient
             .from('posts')
             .select('*')
             .eq('id', postId)
@@ -116,7 +116,7 @@ window.deletePost = async function (postId) {
     if (!confirm('정말로 이 글을 삭제하시겠습니까?')) return;
 
     try {
-        const { error } = await supabase
+        const { error } = await supabaseClient
             .from('posts')
             .delete()
             .eq('id', postId);

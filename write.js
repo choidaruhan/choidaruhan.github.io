@@ -3,11 +3,11 @@ if (window.SUPABASE_URL.includes('여기에')) {
   alert("config.js 파일에 Supabase 설정을 먼저 완료해주세요!");
   window.location.href = "index.html";
 }
-const supabase = supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY);
+const supabaseClient = window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY);
 
 // 세션 확인 (로그인 안된 유저 차단)
 document.addEventListener('DOMContentLoaded', async () => {
-  const { data: { session } } = await supabase.auth.getSession();
+  const { data: { session } } = await supabaseClient.auth.getSession();
   if (!session) {
     alert('글쓰기 권한이 없습니다. 관리자 로그인이 필요합니다.');
     window.location.href = 'login.html';
@@ -28,7 +28,7 @@ writeForm.addEventListener('submit', async (e) => {
   submitBtn.innerText = '저장 중...';
 
   try {
-    const { data, error } = await supabase
+    const { error } = await supabaseClient
       .from('posts')
       .insert([
         { title: title, content: content } // uuid와 created_at은 DB에서 자동 생성됨

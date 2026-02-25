@@ -2,7 +2,7 @@ if (window.SUPABASE_URL.includes('여기에')) {
   alert("config.js 파일에 Supabase 설정을 먼저 완료해주세요!");
   window.location.href = "index.html";
 }
-const supabase = supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY);
+const supabaseClient = window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY);
 
 const loginForm = document.getElementById('login-form');
 const loginBtn = document.getElementById('login-btn');
@@ -17,7 +17,7 @@ loginForm.addEventListener('submit', async (e) => {
   loginBtn.innerText = '로그인 중...';
 
   try {
-    const { data, error } = await supabase.auth.signInWithPassword({
+    const { error } = await supabaseClient.auth.signInWithPassword({
       email: email,
       password: password,
     });
