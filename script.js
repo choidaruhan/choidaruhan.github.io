@@ -1,24 +1,41 @@
+// 1. Supabase 클라이언트 초기화
+// config.js에서 가져온 환경 변수 사용
+const supabase = supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY);
+
 const contentDiv = document.getElementById('content');
 const loadingDiv = document.getElementById('loading');
 const homeLink = document.getElementById('home-link');
 
-// 포스트 목록 사이트 메인에 렌더링
+// 2. 홈 화면 (게시글 목록 로드)
 async function loadHome() {
+    // 키가 입력되지 않은 경우 안내
+    if (window.SUPABASE_URL.includes('여기에')) {
+        contentDiv.innerHTML = '<p style="color:red;">config.js 파일에 Supabase URL과 Anon Key를 입력해주세요!</p>';
+        return;
+    }
+
     showLoading();
     try {
-        const response = await fetch('posts.json');
-        if (!response.ok) throw new Error('Network response was not ok');
-        const posts = await response.json();
+        // posts 테이블에서 id, title, created_at만 가져오기 (작성일 내림차순)
+        const { data: posts, error } = await supabase
+            .from('posts')
+            .select('id, title, created_at')
+            .order('created_at', { ascending: false });
 
-        // 최신 글이 위로 오도록 정렬 (옵션)
-        posts.sort((a, b) => new Date(b.date) - new Date(a.date));
+        if (error) throw error;
+
+        if (!posts || posts.length === 0) {
+            contentDiv.innerHTML = '<p>아직 작성된 글이 없습니다. "글쓰기" 버튼을 눌러 첫 글을 작성해 보세요!</p>';
+            return;
+        }
 
         let html = '<ul class="post-list">';
         posts.forEach(post => {
+            const dateStr = new Date(post.created_at).toLocaleDateString('ko-KR');
             html += `
                 <li>
                     <a href="#${post.id}" class="post-title">${post.title}</a>
-                    <span class="post-date">${post.date}</span>
+                    <span class="post-date">${dateStr}</span>
                 </li>
             `;
         });
@@ -32,25 +49,59 @@ async function loadHome() {
     }
 }
 
-// 개별 마크다운 파일 렌더링
+// 3. 개별 포스트 로드 (본문 읽기)
 async function loadPost(postId) {
     showLoading();
     try {
-        const response = await fetch(`posts/${postId}.md`);
-        if (!response.ok) throw new Error('Post not found');
-        const markdown = await response.text();
+        // 특정 id의 포스트 한 개만 가져오기
+        const { data: post, error } = await supabase
+            .from('posts')
+            .select('*')
+            .eq('id', postId)
+            .single();
 
-        // YAML 프론트매터(--- 블록) 제거 후 본문만 파싱
-        const bodyContent = markdown.replace(/^---\n[\s\S]*?\n---\n/, '');
+        if (error) throw error;
+        if (!post) throw new Error('Post not found');
 
-        // marked.js로 HTML 삽입
-        contentDiv.innerHTML = `<div class="markdown-body">${marked.parse(bodyContent)}</div>`;
+        const dateStr = new Date(post.created_at).toLocaleDateString('ko-KR');
+
+        // marked.js로 markdown 문자열을 html로 변환하여 렌더링
+        let html = `
+            <div class="markdown-body">
+                <h1>${post.title}</h1>
+                <p class="post-date" style="margin-bottom: 2rem; border-bottom: 1px solid #eee; padding-bottom: 1rem;">${dateStr}</p>
+                ${marked.parse(post.content)}
+                <div style="margin-top: 3rem; text-align:right;">
+                    <button onclick="deletePost('${post.id}')" style="background:none; border:none; color:red; cursor:pointer;">글 삭제</button>
+                </div>
+            </div>
+        `;
+        contentDiv.innerHTML = html;
         window.scrollTo(0, 0);
     } catch (error) {
         contentDiv.innerHTML = '<p>포스트를 불러오는 데 실패했습니다.</p>';
         console.error('Error loading post:', error);
     } finally {
         hideLoading();
+    }
+}
+
+// 4. 포스트 삭제 함수 (추가 기능)
+window.deletePost = async function (postId) {
+    if (!confirm('정말로 이 글을 삭제하시겠습니까?')) return;
+
+    try {
+        const { error } = await supabase
+            .from('posts')
+            .delete()
+            .eq('id', postId);
+
+        if (error) throw error;
+        alert('삭제되었습니다.');
+        window.location.hash = ''; // 홈으로 이동
+    } catch (error) {
+        alert('삭제 실패: RLS 정책을 확인하거나 콘솔창을 확인하세요.');
+        console.error('Error deleting post:', error);
     }
 }
 
@@ -71,7 +122,7 @@ homeLink.addEventListener('click', (e) => {
     loadHome();
 });
 
-// URL hash 이벤트(뒤로가기, 직접 접속 등) 처리
+// URL hash 이벤트(뒤로가기, 글 클릭 등) 처리
 window.addEventListener('hashchange', () => {
     const hash = window.location.hash.slice(1);
     if (hash) {
@@ -81,7 +132,7 @@ window.addEventListener('hashchange', () => {
     }
 });
 
-// 페이지 초기 진입 시 처리
+// 페이지 초기 진입 시 라우팅
 window.addEventListener('load', () => {
     const hash = window.location.hash.slice(1);
     if (hash) {

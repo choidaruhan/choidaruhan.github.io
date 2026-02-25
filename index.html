@@ -7,23 +7,29 @@
     <title>My Simple Blog</title>
     <!-- GitHub Pages 캐시 무효화 및 빌드 강제 트리거용 주석 v2 -->
     <link rel="stylesheet" href="styles.css">
-    <!-- 마크다운 변환을 위한 marked.js 로드 -->
+    <!-- Supabase JS & 마크다운 변환 스크립트 -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <!-- 환경 설정 (Supabase 키 등) -->
+    <script src="config.js"></script>
 </head>
 
 <body>
     <header>
-        <h1>심플 블로그</h1>
+        <h1>심플 블로그 (Supabase 연동)</h1>
         <nav>
             <a href="#" id="home-link">홈</a>
+            <a href="write.html" id="write-link">글쓰기</a>
         </nav>
     </header>
     <main>
         <div id="loading" class="hidden">로딩 중...</div>
-        <div id="content"></div>
+        <div id="content">
+            <!-- 자바스크립트를 통해 Supabase DB의 데이터가 렌더링됩니다 -->
+        </div>
     </main>
     <footer>
-        <p>&copy; 2026 My Simple Blog. GitHub Pages에서 호스팅됨.</p>
+        <p>&copy; 2026 My Simple Blog. Database by Supabase.</p>
     </footer>
     <script src="script.js"></script>
 </body>
