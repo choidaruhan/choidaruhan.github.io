@@ -23,6 +23,46 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 const writeForm = document.getElementById('write-form');
 const submitBtn = document.getElementById('submit-btn');
+const pageTitle = document.getElementById('page-title'); // html에 id 추가 필요
+const titleInput = document.getElementById('post-title');
+const contentInput = document.getElementById('post-content');
+
+// URL 파라미터 확인 (수정 모드인지 판별)
+const urlParams = new URLSearchParams(window.location.search);
+const editPostId = urlParams.get('id');
+
+// 수정 모드일 경우 기존 데이터 불러오기
+document.addEventListener('DOMContentLoaded', async () => {
+  if (!supabaseClient) return;
+  const { data: { session } } = await supabaseClient.auth.getSession();
+  if (!session) {
+    alert('글쓰기 권한이 없습니다. 관리자 로그인이 필요합니다.');
+    window.location.href = 'login.html';
+    return;
+  }
+
+  if (editPostId) {
+    if (pageTitle) pageTitle.innerText = '글 수정';
+    submitBtn.innerText = '수정 완료';
+
+    try {
+      const { data: post, error } = await supabaseClient
+        .from('posts')
+        .select('*')
+        .eq('id', editPostId)
+        .single();
+
+      if (error) throw error;
+      if (post) {
+        titleInput.value = post.title;
+        contentInput.value = post.content;
+      }
+    } catch (err) {
+      console.error('Error fetching post for edit:', err);
+      alert('기존 글을 불러오는 데 실패했습니다.');
+    }
+  }
+});
 
 writeForm.addEventListener('submit', async (e) => {
   e.preventDefault(); // 기본 새로고침 방지
@@ -35,18 +75,26 @@ writeForm.addEventListener('submit', async (e) => {
   submitBtn.innerText = '저장 중...';
 
   try {
-    const { error } = await supabaseClient
-      .from('posts')
-      .insert([
-        { title: title, content: content } // uuid와 created_at은 DB에서 자동 생성됨
-      ]);
+    if (editPostId) {
+      // 글 수정 모드 (Update)
+      const { error } = await supabaseClient
+        .from('posts')
+        .update({ title, content })
+        .eq('id', editPostId);
 
-    if (error) {
-      throw error;
+      if (error) throw error;
+      alert('글이 성공적으로 수정되었습니다!');
+      window.location.href = `index.html#${editPostId}`; // 수정한 글로 이동
+    } else {
+      // 새 글 작성 모드 (Insert)
+      const { error } = await supabaseClient
+        .from('posts')
+        .insert([{ title, content }]);
+
+      if (error) throw error;
+      alert('글이 성공적으로 등록되었습니다!');
+      window.location.href = 'index.html'; // 홈으로 이동
     }
-
-    alert('글이 성공적으로 등록되었습니다!');
-    window.location.href = 'index.html'; // 홈으로 이동
 
   } catch (error) {
     console.error('Error inserting post:', error.message);
