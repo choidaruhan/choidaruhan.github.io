@@ -57,6 +57,22 @@
     .btn-submit:hover {
       background-color: var(--link-color);
     }
+
+    .btn-cancel {
+      background-color: #f1f3f5;
+      color: #333;
+      border: 1px solid #ddd;
+      padding: 0.8rem 2rem;
+      font-size: 1rem;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: background 0.2s;
+      margin-right: 1rem;
+    }
+
+    .btn-cancel:hover {
+      background-color: #e9ecef;
+    }
   </style>
 </head>
 
@@ -78,7 +94,8 @@
           <label for="post-content">마크다운 본문</label>
           <textarea id="post-content" class="form-control" placeholder="# 제목을 입력하고 마크다운으로 내용을 채워보세요!" required></textarea>
         </div>
-        <div style="text-align: right;">
+        <div style="text-align: right; margin-top: 1rem;">
+          <button type="button" class="btn-cancel" onclick="history.back()">취소</button>
           <button type="submit" class="btn-submit" id="submit-btn">작성 완료</button>
         </div>
       </form>
