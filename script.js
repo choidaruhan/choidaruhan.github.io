@@ -1,8 +1,14 @@
-const supabaseClient = window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY);
+let supabaseClient = null;
+try {
+    supabaseClient = window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY);
+} catch (e) {
+    console.error("Supabase URL 에러: config.js를 확인하세요.", e);
+}
 let currentSession = null;
 
 // 네비게이션 로그인/로그아웃 버튼 세팅
 async function checkAuth() {
+    if (!supabaseClient) return;
     const { data: { session } } = await supabaseClient.auth.getSession();
     currentSession = session;
 
@@ -29,11 +35,10 @@ const contentDiv = document.getElementById('content');
 const loadingDiv = document.getElementById('loading');
 const homeLink = document.getElementById('home-link');
 
-// 2. 홈 화면 (게시글 목록 로드)
 async function loadHome() {
-    // 키가 입력되지 않은 경우 안내
-    if (window.SUPABASE_URL.includes('여기에')) {
-        contentDiv.innerHTML = '<p style="color:red;">config.js 파일에 Supabase URL과 Anon Key를 입력해주세요!</p>';
+    // 키가 입력되지 않거나 올바르지 않은 경우 안내
+    if (!supabaseClient || window.SUPABASE_URL.includes('여기에') || !window.SUPABASE_URL.startsWith('http')) {
+        contentDiv.innerHTML = '<p style="color:red; font-weight:bold; font-size: 1.2rem;">config.js 파일에 올바른 Supabase URL (https://...)과 Anon Key를 입력해주세요!</p>';
         return;
     }
 

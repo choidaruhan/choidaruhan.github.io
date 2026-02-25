@@ -1,14 +1,21 @@
-if (window.SUPABASE_URL.includes('여기에')) {
-  alert("config.js 파일에 Supabase 설정을 먼저 완료해주세요!");
+if (window.SUPABASE_URL.includes('여기에') || !window.SUPABASE_URL.startsWith('http')) {
+  alert("config.js 파일에 올바른 Supabase URL (https://...)과 Anon Key를 입력해주세요!");
   window.location.href = "index.html";
 }
-const supabaseClient = window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY);
+
+let supabaseClient = null;
+try {
+  supabaseClient = window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY);
+} catch (e) {
+  console.error("Supabase 초기화 불가", e);
+}
 
 const loginForm = document.getElementById('login-form');
 const loginBtn = document.getElementById('login-btn');
 
 loginForm.addEventListener('submit', async (e) => {
   e.preventDefault();
+  if (!supabaseClient) return alert('Supabase 설정이 잘못되어 로그인할 수 없습니다.');
 
   const email = document.getElementById('email').value;
   const password = document.getElementById('password').value;

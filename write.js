@@ -1,12 +1,19 @@
 // Supabase 초기화
-if (window.SUPABASE_URL.includes('여기에')) {
-  alert("config.js 파일에 Supabase 설정을 먼저 완료해주세요!");
+if (window.SUPABASE_URL.includes('여기에') || !window.SUPABASE_URL.startsWith('http')) {
+  alert("config.js 파일에 올바른 Supabase URL (https://...)과 Anon Key를 입력해주세요!");
   window.location.href = "index.html";
 }
-const supabaseClient = window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY);
+
+let supabaseClient = null;
+try {
+  supabaseClient = window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY);
+} catch (e) {
+  console.error("Supabase 초기화 불가", e);
+}
 
 // 세션 확인 (로그인 안된 유저 차단)
 document.addEventListener('DOMContentLoaded', async () => {
+  if (!supabaseClient) return;
   const { data: { session } } = await supabaseClient.auth.getSession();
   if (!session) {
     alert('글쓰기 권한이 없습니다. 관리자 로그인이 필요합니다.');
