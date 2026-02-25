@@ -9,7 +9,7 @@ async function loadHome() {
         const response = await fetch('posts.json');
         if (!response.ok) throw new Error('Network response was not ok');
         const posts = await response.json();
-        
+
         // 최신 글이 위로 오도록 정렬 (옵션)
         posts.sort((a, b) => new Date(b.date) - new Date(a.date));
 
@@ -39,9 +39,12 @@ async function loadPost(postId) {
         const response = await fetch(`posts/${postId}.md`);
         if (!response.ok) throw new Error('Post not found');
         const markdown = await response.text();
-        
-        // marked.js로 마크다운 파싱해서 HTML로 삽입
-        contentDiv.innerHTML = `<div class="markdown-body">${marked.parse(markdown)}</div>`;
+
+        // YAML 프론트매터(--- 블록) 제거 후 본문만 파싱
+        const bodyContent = markdown.replace(/^---\n[\s\S]*?\n---\n/, '');
+
+        // marked.js로 HTML 삽입
+        contentDiv.innerHTML = `<div class="markdown-body">${marked.parse(bodyContent)}</div>`;
         window.scrollTo(0, 0);
     } catch (error) {
         contentDiv.innerHTML = '<p>포스트를 불러오는 데 실패했습니다.</p>';
