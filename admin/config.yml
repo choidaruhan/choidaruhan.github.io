@@ -2,8 +2,6 @@ backend:
   name: github
   repo: choidaruhan/choidaruhan.github.io
   branch: main
-  pkce: true # Netlify 우회용 PKCE 인증 활성화
-  app_id: 87802bc3afba4346adbe # 임시(Test)용 Oauth App ID. 실제로는 직접 발급받는 것이 좋습니다.
 
 media_folder: "images"
 public_folder: "/images"
