@@ -1,6 +1,29 @@
-// 1. Supabase 클라이언트 초기화
-// config.js에서 가져온 환경 변수 사용
 const supabase = supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY);
+let currentSession = null;
+
+// 네비게이션 로그인/로그아웃 버튼 세팅
+async function checkAuth() {
+    const { data: { session } } = await supabase.auth.getSession();
+    currentSession = session;
+
+    const authLinks = document.getElementById('auth-links');
+    if (session) {
+        authLinks.innerHTML = `
+            <a href="write.html" id="write-link" style="margin-right: 10px;">글쓰기</a>
+            <a href="#" onclick="logout()" style="color: #e74c3c; margin-right: 10px;">로그아웃</a>
+        `;
+    } else {
+        authLinks.innerHTML = `
+            <a href="login.html" id="login-link" style="margin-right: 10px;">관리자 로그인</a>
+        `;
+    }
+}
+
+window.logout = async function () {
+    await supabase.auth.signOut();
+    alert('로그아웃 되었습니다.');
+    window.location.reload();
+}
 
 const contentDiv = document.getElementById('content');
 const loadingDiv = document.getElementById('loading');
@@ -71,9 +94,11 @@ async function loadPost(postId) {
                 <h1>${post.title}</h1>
                 <p class="post-date" style="margin-bottom: 2rem; border-bottom: 1px solid #eee; padding-bottom: 1rem;">${dateStr}</p>
                 ${marked.parse(post.content)}
+                ${currentSession ? `
                 <div style="margin-top: 3rem; text-align:right;">
                     <button onclick="deletePost('${post.id}')" style="background:none; border:none; color:red; cursor:pointer;">글 삭제</button>
                 </div>
+                ` : ''}
             </div>
         `;
         contentDiv.innerHTML = html;
@@ -133,7 +158,9 @@ window.addEventListener('hashchange', () => {
 });
 
 // 페이지 초기 진입 시 라우팅
-window.addEventListener('load', () => {
+window.addEventListener('load', async () => {
+    await checkAuth();
+
     const hash = window.location.hash.slice(1);
     if (hash) {
         loadPost(hash);

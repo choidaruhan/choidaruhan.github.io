@@ -5,6 +5,15 @@ if (window.SUPABASE_URL.includes('여기에')) {
 }
 const supabase = supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY);
 
+// 세션 확인 (로그인 안된 유저 차단)
+document.addEventListener('DOMContentLoaded', async () => {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) {
+    alert('글쓰기 권한이 없습니다. 관리자 로그인이 필요합니다.');
+    window.location.href = 'login.html';
+  }
+});
+
 const writeForm = document.getElementById('write-form');
 const submitBtn = document.getElementById('submit-btn');
 
