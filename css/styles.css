@@ -36,8 +36,6 @@ nav a:hover {
 }
 
 main {
-    margin: 2rem auto;
-    padding: 0 1rem;
     min-height: 60vh;
 }
 
@@ -82,9 +80,9 @@ main {
 
 .markdown-body {
     background: white;
-    padding: 2rem;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    border-radius: 8px;
+    padding: 1.5rem;
+    box-sizing: border-box;
+    min-height: 100dvh;
 }
 
 .markdown-body img {
@@ -238,7 +236,6 @@ main.blog-layout {
 
 .content-wrapper {
     flex-grow: 1;
-    padding: 2rem;
     max-width: 800px;
     margin: 0 auto;
     width: 100%;

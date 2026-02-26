@@ -41,6 +41,21 @@ if (sidebarToggleBtn && sidebar) {
     sidebarToggleBtn.addEventListener('click', () => {
         sidebar.classList.toggle('show');
     });
+
+    // 모바일 등에서 메뉴 바깥 영역 클릭 시 사이드바 닫기
+    document.addEventListener('click', (e) => {
+        if (sidebar.classList.contains('show') && !sidebar.contains(e.target) && !sidebarToggleBtn.contains(e.target)) {
+            sidebar.classList.remove('show');
+        }
+    });
+
+    // 사이드바 내의 링크 클릭 시 사이드바 닫기
+    sidebar.addEventListener('click', (e) => {
+        // 클릭한 요소가 a 태그이거나 a 태그의 자식인 경우
+        if (e.target.closest('a')) {
+            sidebar.classList.remove('show');
+        }
+    });
 }
 
 async function loadSidebarPosts() {
@@ -48,12 +63,23 @@ async function loadSidebarPosts() {
     if (!sidebarListDiv || !supabaseClient) return;
 
     try {
-        const { data: posts, error } = await supabaseClient
-            .from('posts')
-            .select('id, title, created_at')
-            .order('created_at', { ascending: false });
+        let posts = null;
+        const cached = sessionStorage.getItem('sidebar_posts');
 
-        if (error) throw error;
+        if (cached) {
+            posts = JSON.parse(cached);
+        } else {
+            const { data, error } = await supabaseClient
+                .from('posts')
+                .select('id, title, created_at')
+                .order('created_at', { ascending: false });
+
+            if (error) throw error;
+            posts = data;
+
+            // 캐시 저장
+            sessionStorage.setItem('sidebar_posts', JSON.stringify(posts));
+        }
 
         if (!posts || posts.length === 0) {
             sidebarListDiv.innerHTML = '<p style="font-size: 0.9rem; color: #7f8c8d;">게시글이 없습니다.</p>';
@@ -97,15 +123,26 @@ async function loadHome() {
 async function loadPost(postId) {
     showLoading();
     try {
-        // 특정 id의 포스트 한 개만 가져오기
-        const { data: post, error } = await supabaseClient
-            .from('posts')
-            .select('*')
-            .eq('id', postId)
-            .single();
+        let post = null;
+        const cachedPost = sessionStorage.getItem('post_' + postId);
 
-        if (error) throw error;
-        if (!post) throw new Error('Post not found');
+        if (cachedPost) {
+            post = JSON.parse(cachedPost);
+        } else {
+            // 특정 id의 포스트 한 개만 가져오기
+            const { data, error } = await supabaseClient
+                .from('posts')
+                .select('*')
+                .eq('id', postId)
+                .single();
+
+            if (error) throw error;
+            if (!data) throw new Error('Post not found');
+
+            post = data;
+            // 캐시 저장
+            sessionStorage.setItem('post_' + postId, JSON.stringify(post));
+        }
 
         const dateStr = new Date(post.created_at).toLocaleDateString('ko-KR');
 
@@ -143,6 +180,11 @@ window.deletePost = async function (postId) {
             .eq('id', postId);
 
         if (error) throw error;
+
+        // 삭제 후 캐시 무효화
+        sessionStorage.removeItem('sidebar_posts');
+        sessionStorage.removeItem('post_' + postId);
+
         alert('삭제되었습니다.');
 
         // 목록 다시 로드

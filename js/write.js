@@ -83,6 +83,11 @@ writeForm.addEventListener('submit', async (e) => {
         .eq('id', editPostId);
 
       if (error) throw error;
+
+      // 글 수정 후 캐시 무효화
+      sessionStorage.removeItem('sidebar_posts');
+      sessionStorage.removeItem('post_' + editPostId);
+
       alert('글이 성공적으로 수정되었습니다!');
       window.location.href = `index.html#${editPostId}`; // 수정한 글로 이동
     } else {
@@ -92,6 +97,10 @@ writeForm.addEventListener('submit', async (e) => {
         .insert([{ title, content }]);
 
       if (error) throw error;
+
+      // 새 글 작성 후 사이드바 캐시 무효화
+      sessionStorage.removeItem('sidebar_posts');
+
       alert('글이 성공적으로 등록되었습니다!');
       window.location.href = 'index.html'; // 홈으로 이동
     }
