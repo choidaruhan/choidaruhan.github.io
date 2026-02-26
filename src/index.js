@@ -29,6 +29,11 @@ export default {
       return !!jwt;
     };
 
+    // 0. Authentication Check (GET /auth-check)
+    if (path === '/auth-check' && method === 'GET') {
+      return Response.json({ authorized: isAuthorized(request) }, { headers: corsHeaders });
+    }
+
     try {
       // 1. 글 목록 조회 (GET /posts) - 공개
       if (path === '/posts' && method === 'GET') {

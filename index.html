@@ -24,7 +24,15 @@
                     </a>
                 </div>
                 <nav class="sidebar-nav">
-                    <div id="auth-links" class="auth-links-sidebar"></div>
+                    <div id="auth-links" class="auth-links-sidebar">
+                        <div id="logged-out-view" class="hidden">
+                            <a href="write.html" id="login-link">로그인</a>
+                        </div>
+                        <div id="logged-in-view" class="hidden">
+                            <a href="write.html" id="write-link">글쓰기</a>
+                            <a href="#" onclick="logout()" id="logout-link" style="margin-left: 1rem; color: #7f8c8d; font-size: 0.9rem;">로그아웃</a>
+                        </div>
+                    </div>
                 </nav>
             </div>
             <div class="sidebar-menu">
@@ -49,7 +57,27 @@
             <div class="content-wrapper">
                 <div id="loading" class="hidden">로딩 중...</div>
                 <div id="content">
-                    <!-- 자바스크립트를 통해 Cloudflare D1 DB의 데이터가 렌더링됩니다 -->
+                    <div id="home-view" class="hidden">
+                        <div style="text-align: center; padding: 3rem 0;">
+                            <h2 style="color: var(--primary-color);">My Cloudflare Blog</h2>
+                            <p style="color: #7f8c8d; margin-top: 1rem;">왼쪽 메뉴에서 글을 선택하여 읽어보세요.</p>
+                            <p style="font-size: 0.8rem; color: #bdc3c7; margin-top: 0.5rem;">Semantic Search powered by Cloudflare Vectorize</p>
+                        </div>
+                    </div>
+                    <div id="post-view" class="hidden">
+                        <div class="markdown-body">
+                            <h1 id="post-title-display"></h1>
+                            <p id="post-date-display" class="post-date" style="margin-bottom: 2rem; border-bottom: 1px solid #eee; padding-bottom: 1rem;"></p>
+                            <div id="post-content-display"></div>
+                            <div style="margin-top: 3rem; text-align:right;">
+                                <a href="#" id="edit-post-link" style="color:var(--primary-color); text-decoration:none; margin-right: 1rem; font-weight:bold;">글 수정</a>
+                                <button id="delete-post-btn" style="background:none; border:none; color:red; cursor:pointer; font-weight:bold;">글 삭제</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="error-view" class="hidden">
+                        <p style="text-align: center; padding: 3rem 0; color: red;">포스트를 불러오는 데 실패했습니다.</p>
+                    </div>
                 </div>
             </div>
         </main>

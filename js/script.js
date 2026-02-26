@@ -1,14 +1,24 @@
 let allPosts = []; // 모든 글 목록을 저장할 변수
 
 async function checkAuth() {
-    // Cloudflare Access가 활성되면 보호된 페이지에 접근할 수 있습니다.
-    // 여기서는 단순히 글쓰기 링크만 항상 표시하도록 수정합니다.
-    const authLinks = document.getElementById('auth-links');
-    if (authLinks) {
-        authLinks.innerHTML = `
-            <a href="write.html" id="write-link">글쓰기</a>
-            <a href="#" onclick="logout()" id="logout-link" style="margin-left: 1rem; color: #7f8c8d; font-size: 0.9rem;">로그아웃</a>
-        `;
+    try {
+        const response = await fetch(`${window.API_URL}/auth-check`);
+        const data = await response.json();
+
+        const loggedInView = document.getElementById('logged-in-view');
+        const loggedOutView = document.getElementById('logged-out-view');
+
+        if (!loggedInView || !loggedOutView) return;
+
+        if (data.authorized) {
+            loggedInView.classList.remove('hidden');
+            loggedOutView.classList.add('hidden');
+        } else {
+            loggedInView.classList.add('hidden');
+            loggedOutView.classList.remove('hidden');
+        }
+    } catch (error) {
+        console.error('Auth check failed:', error);
     }
 }
 
@@ -26,7 +36,6 @@ window.logout = function () {
     }
 }
 
-const contentDiv = document.getElementById('content');
 const loadingDiv = document.getElementById('loading');
 const homeLink = document.getElementById('home-link');
 const sidebarToggleBtn = document.getElementById('sidebar-toggle');
@@ -122,17 +131,27 @@ function setupSearch() {
 }
 
 async function loadHome() {
-    contentDiv.innerHTML = `
-        <div style="text-align: center; padding: 3rem 0;">
-            <h2 style="color: var(--primary-color);">My Cloudflare Blog</h2>
-            <p style="color: #7f8c8d; margin-top: 1rem;">왼쪽 메뉴에서 글을 선택하여 읽어보세요.</p>
-            <p style="font-size: 0.8rem; color: #bdc3c7; margin-top: 0.5rem;">Semantic Search powered by Cloudflare Vectorize</p>
-        </div>
-    `;
+    const homeView = document.getElementById('home-view');
+    const postView = document.getElementById('post-view');
+    const errorView = document.getElementById('error-view');
+    if (homeView && postView && errorView) {
+        homeView.classList.remove('hidden');
+        postView.classList.add('hidden');
+        errorView.classList.add('hidden');
+    }
 }
 
 // 3. 개별 포스트 로드 (본문 읽기)
 async function loadPost(postId) {
+    const homeView = document.getElementById('home-view');
+    const postView = document.getElementById('post-view');
+    const errorView = document.getElementById('error-view');
+
+    // 로딩 전 모든 뷰 숨김
+    if (homeView) homeView.classList.add('hidden');
+    if (postView) postView.classList.add('hidden');
+    if (errorView) errorView.classList.add('hidden');
+
     showLoading();
     try {
         const response = await fetch(`${window.API_URL}/posts/${postId}`);
@@ -141,21 +160,24 @@ async function loadPost(postId) {
 
         const dateStr = new Date(post.created_at).toLocaleDateString('ko-KR');
 
-        let html = `
-            <div class="markdown-body">
-                <h1>${post.title}</h1>
-                <p class="post-date" style="margin-bottom: 2rem; border-bottom: 1px solid #eee; padding-bottom: 1rem;">${dateStr}</p>
-                ${marked.parse(post.content)}
-                <div style="margin-top: 3rem; text-align:right;">
-                    <a href="write.html#${post.id}" style="color:var(--primary-color); text-decoration:none; margin-right: 1rem; font-weight:bold;">글 수정</a>
-                    <button onclick="deletePost('${post.id}')" style="background:none; border:none; color:red; cursor:pointer; font-weight:bold;">글 삭제</button>
-                </div>
-            </div>
-        `;
-        contentDiv.innerHTML = html;
+        const titleDisplay = document.getElementById('post-title-display');
+        const dateDisplay = document.getElementById('post-date-display');
+        const contentDisplay = document.getElementById('post-content-display');
+        const editLink = document.getElementById('edit-post-link');
+        const deleteBtn = document.getElementById('delete-post-btn');
+
+        if (titleDisplay && dateDisplay && contentDisplay && editLink && deleteBtn) {
+            titleDisplay.textContent = post.title;
+            dateDisplay.textContent = dateStr;
+            contentDisplay.innerHTML = marked.parse(post.content);
+            editLink.href = `write.html#${post.id}`;
+            deleteBtn.onclick = () => deletePost(post.id);
+
+            if (postView) postView.classList.remove('hidden');
+        }
         window.scrollTo(0, 0);
     } catch (error) {
-        contentDiv.innerHTML = '<p>포스트를 불러오는 데 실패했습니다.</p>';
+        if (errorView) errorView.classList.remove('hidden');
         console.error('Error loading post:', error);
     } finally {
         hideLoading();
@@ -183,7 +205,6 @@ window.deletePost = async function (postId) {
 
 function showLoading() {
     loadingDiv.classList.remove('hidden');
-    contentDiv.innerHTML = '';
 }
 
 function hideLoading() {
