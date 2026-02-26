@@ -15,22 +15,44 @@
 </head>
 
 <body>
-    <header>
-        <h1>심플 블로그 (Supabase 연동)</h1>
-        <nav>
-            <a href="#" id="home-link">홈</a>
-            <span id="auth-links"></span>
-        </nav>
-    </header>
-    <main>
-        <div id="loading" class="hidden">로딩 중...</div>
-        <div id="content">
-            <!-- 자바스크립트를 통해 Supabase DB의 데이터가 렌더링됩니다 -->
-        </div>
-    </main>
-    <footer>
-        <p>&copy; 2026 My Simple Blog. Database by Supabase.</p>
-    </footer>
+    <div class="app-container">
+        <!-- 사이드바 -->
+        <aside class="left-sidebar" id="sidebar">
+            <div class="sidebar-top">
+                <div class="sidebar-brand">
+                    <a href="#" id="home-link">
+                        <h2>최다루한의 블로그</h2>
+                    </a>
+                </div>
+                <nav class="sidebar-nav">
+                    <div id="auth-links" class="auth-links-sidebar"></div>
+                </nav>
+            </div>
+            <div class="sidebar-menu">
+                <h3 class="menu-title">글 목록</h3>
+                <div id="sidebar-post-list">
+                    <!-- 사이드바에 글 목록이 렌더링됩니다 -->
+                </div>
+            </div>
+            <div class="sidebar-bottom">
+                <p>&copy; 2026 My Simple Blog.</p>
+                <p>Database by Supabase.</p>
+            </div>
+        </aside>
+        <!-- 메인 콘텐츠 -->
+        <main class="main-content">
+            <header class="mobile-header hidden-desktop">
+                <button id="sidebar-toggle" class="sidebar-toggle-btn">☰</button>
+                <h2>최다루한의 블로그</h2>
+            </header>
+            <div class="content-wrapper">
+                <div id="loading" class="hidden">로딩 중...</div>
+                <div id="content">
+                    <!-- 자바스크립트를 통해 Supabase DB의 데이터가 렌더링됩니다 -->
+                </div>
+            </div>
+        </main>
+    </div>
     <script src="js/script.js"></script>
 </body>
 

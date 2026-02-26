@@ -1,0 +1,8 @@
+{
+  "name": "my-blog",
+  "version": "1.0.0",
+  "description": "My Simple Blog",
+  "scripts": {
+    "dev": "npx serve -s ."
+  }
+}

@@ -15,12 +15,12 @@ async function checkAuth() {
     const authLinks = document.getElementById('auth-links');
     if (session) {
         authLinks.innerHTML = `
-            <a href="write.html" id="write-link" style="margin-right: 10px;">글쓰기</a>
-            <a href="#" onclick="logout()" style="color: #e74c3c; margin-right: 10px;">로그아웃</a>
+            <a href="write.html" id="write-link">글쓰기</a>
+            <a href="#" onclick="logout()">로그아웃</a>
         `;
     } else {
         authLinks.innerHTML = `
-            <a href="login.html" id="login-link" style="margin-right: 10px;">관리자 로그인</a>
+            <a href="login.html" id="login-link">관리자 로그인</a>
         `;
     }
 }
@@ -34,17 +34,20 @@ window.logout = async function () {
 const contentDiv = document.getElementById('content');
 const loadingDiv = document.getElementById('loading');
 const homeLink = document.getElementById('home-link');
+const sidebarToggleBtn = document.getElementById('sidebar-toggle');
+const sidebar = document.getElementById('sidebar');
 
-async function loadHome() {
-    // 키가 입력되지 않거나 올바르지 않은 경우 안내
-    if (!supabaseClient || window.SUPABASE_URL.includes('여기에') || !window.SUPABASE_URL.startsWith('http')) {
-        contentDiv.innerHTML = '<p style="color:red; font-weight:bold; font-size: 1.2rem;">config.js 파일에 올바른 Supabase URL (https://...)과 Anon Key를 입력해주세요!</p>';
-        return;
-    }
+if (sidebarToggleBtn && sidebar) {
+    sidebarToggleBtn.addEventListener('click', () => {
+        sidebar.classList.toggle('show');
+    });
+}
 
-    showLoading();
+async function loadSidebarPosts() {
+    const sidebarListDiv = document.getElementById('sidebar-post-list');
+    if (!sidebarListDiv || !supabaseClient) return;
+
     try {
-        // posts 테이블에서 id, title, created_at만 가져오기 (작성일 내림차순)
         const { data: posts, error } = await supabaseClient
             .from('posts')
             .select('id, title, created_at')
@@ -53,7 +56,7 @@ async function loadHome() {
         if (error) throw error;
 
         if (!posts || posts.length === 0) {
-            contentDiv.innerHTML = '<p>아직 작성된 글이 없습니다. "글쓰기" 버튼을 눌러 첫 글을 작성해 보세요!</p>';
+            sidebarListDiv.innerHTML = '<p style="font-size: 0.9rem; color: #7f8c8d;">게시글이 없습니다.</p>';
             return;
         }
 
@@ -68,13 +71,26 @@ async function loadHome() {
             `;
         });
         html += '</ul>';
-        contentDiv.innerHTML = html;
+        sidebarListDiv.innerHTML = html;
     } catch (error) {
-        contentDiv.innerHTML = '<p>포스트 목록을 불러오는 데 실패했습니다.</p>';
-        console.error('Error loading home:', error);
-    } finally {
-        hideLoading();
+        sidebarListDiv.innerHTML = '<p style="font-size: 0.9rem; color: red;">목록을 불러오지 못했습니다.</p>';
+        console.error('Error loading sidebar:', error);
     }
+}
+
+async function loadHome() {
+    // 키가 입력되지 않거나 올바르지 않은 경우 안내
+    if (!supabaseClient || window.SUPABASE_URL.includes('여기에') || !window.SUPABASE_URL.startsWith('http')) {
+        contentDiv.innerHTML = '<p style="color:red; font-weight:bold; font-size: 1.2rem;">config.js 파일에 올바른 Supabase URL (https://...)과 Anon Key를 입력해주세요!</p>';
+        return;
+    }
+
+    contentDiv.innerHTML = `
+        <div style="text-align: center; padding: 3rem 0;">
+            <h2 style="color: var(--primary-color);">My Simple Blog</h2>
+            <p style="color: #7f8c8d; margin-top: 1rem;">왼쪽 메뉴에서 글을 선택하여 읽어보세요.</p>
+        </div>
+    `;
 }
 
 // 3. 개별 포스트 로드 (본문 읽기)
@@ -117,7 +133,6 @@ async function loadPost(postId) {
     }
 }
 
-// 4. 포스트 삭제 함수 (추가 기능)
 window.deletePost = async function (postId) {
     if (!confirm('정말로 이 글을 삭제하시겠습니까?')) return;
 
@@ -129,6 +144,10 @@ window.deletePost = async function (postId) {
 
         if (error) throw error;
         alert('삭제되었습니다.');
+
+        // 목록 다시 로드
+        await loadSidebarPosts();
+
         window.location.hash = ''; // 홈으로 이동
     } catch (error) {
         alert('삭제 실패: RLS 정책을 확인하거나 콘솔창을 확인하세요.');
@@ -166,6 +185,7 @@ window.addEventListener('hashchange', () => {
 // 페이지 초기 진입 시 라우팅
 window.addEventListener('load', async () => {
     await checkAuth();
+    await loadSidebarPosts();
 
     const hash = window.location.hash.slice(1);
     if (hash) {
