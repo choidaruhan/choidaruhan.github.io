@@ -154,7 +154,7 @@ async function loadPost(postId) {
                 ${marked.parse(post.content)}
                 ${currentSession ? `
                 <div style="margin-top: 3rem; text-align:right;">
-                    <a href="write.html?id=${post.id}" style="color:var(--primary-color); text-decoration:none; margin-right: 1rem; font-weight:bold;">글 수정</a>
+                    <a href="write.html#${post.id}" style="color:var(--primary-color); text-decoration:none; margin-right: 1rem; font-weight:bold;">글 수정</a>
                     <button onclick="deletePost('${post.id}')" style="background:none; border:none; color:red; cursor:pointer; font-weight:bold;">글 삭제</button>
                 </div>
                 ` : ''}
