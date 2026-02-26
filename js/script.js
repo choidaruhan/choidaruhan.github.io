@@ -20,7 +20,7 @@ async function checkAuth() {
         `;
     } else {
         authLinks.innerHTML = `
-            <a href="login.html" id="login-link">관리자 로그인</a>
+            <a href="login.html" id="login-link">로그인</a>
         `;
     }
 }

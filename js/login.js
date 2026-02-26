@@ -13,6 +13,11 @@ try {
 const loginForm = document.getElementById('login-form');
 const loginBtn = document.getElementById('login-btn');
 
+if (!loginForm) {
+  console.error('Fatal Error: #login-form not found in the DOM!');
+}
+
+
 loginForm.addEventListener('submit', async (e) => {
   e.preventDefault();
   if (!supabaseClient) return alert('Supabase 설정이 잘못되어 로그인할 수 없습니다.');
@@ -35,7 +40,8 @@ loginForm.addEventListener('submit', async (e) => {
     window.location.href = 'index.html'; // 로그인 성공 시 홈으로
   } catch (error) {
     console.error('Login error:', error.message);
-    alert('로그인 실패: 이메일이나 비밀번호를 확인해주세요.');
+    // Supabase에서 반환하는 실제 에러 메시지를 보여주도록 수정
+    alert('로그인 실패: ' + error.message + '\n\n(참고: Supabase 설정에서 "Confirm email"이 켜져있어 이메일 인증을 안했거나 비밀번호가 틀렸을 수 있습니다.)');
   } finally {
     loginBtn.disabled = false;
     loginBtn.innerText = '로그인';

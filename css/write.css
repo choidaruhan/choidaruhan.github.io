@@ -20,8 +20,6 @@
   padding: 0.8rem;
   border: 1px solid #ccc;
   border-radius: 4px;
-  font-family: inherit;
-  font-size: 1rem;
   box-sizing: border-box;
   /* 패딩 포함 넓이 계산 */
 }
@@ -36,7 +34,6 @@ textarea.form-control {
   color: white;
   border: none;
   padding: 0.8rem 2rem;
-  font-size: 1rem;
   border-radius: 4px;
   cursor: pointer;
   transition: background 0.2s;
@@ -51,7 +48,6 @@ textarea.form-control {
   color: #333;
   border: 1px solid #ddd;
   padding: 0.8rem 2rem;
-  font-size: 1rem;
   border-radius: 4px;
   cursor: pointer;
   transition: background 0.2s;

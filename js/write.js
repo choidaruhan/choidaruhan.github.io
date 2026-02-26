@@ -16,7 +16,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (!supabaseClient) return;
   const { data: { session } } = await supabaseClient.auth.getSession();
   if (!session) {
-    alert('글쓰기 권한이 없습니다. 관리자 로그인이 필요합니다.');
+    alert('글쓰기 권한이 없습니다. 로그인이 필요합니다.');
     window.location.href = 'login.html';
   }
 });
@@ -36,7 +36,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (!supabaseClient) return;
   const { data: { session } } = await supabaseClient.auth.getSession();
   if (!session) {
-    alert('글쓰기 권한이 없습니다. 관리자 로그인이 필요합니다.');
+    alert('글쓰기 권한이 없습니다. 로그인이 필요합니다.');
     window.location.href = 'login.html';
     return;
   }
