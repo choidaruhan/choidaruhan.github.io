@@ -7,10 +7,9 @@
     <title>최다루한의 블로그</title>
     <!-- GitHub Pages 캐시 무효화 및 빌드 강제 트리거용 주석 v2 -->
     <link rel="stylesheet" href="css/styles.css">
-    <!-- Supabase JS & 마크다운 변환 스크립트 -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- 마크다운 변환 스크립트 -->
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-    <!-- 환경 설정 (Supabase 키 등) -->
+    <!-- 환경 설정 (API URL 등) -->
     <script src="js/config.js"></script>
 </head>
 
@@ -50,7 +49,7 @@
             <div class="content-wrapper">
                 <div id="loading" class="hidden">로딩 중...</div>
                 <div id="content">
-                    <!-- 자바스크립트를 통해 Supabase DB의 데이터가 렌더링됩니다 -->
+                    <!-- 자바스크립트를 통해 Cloudflare D1 DB의 데이터가 렌더링됩니다 -->
                 </div>
             </div>
         </main>

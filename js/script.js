@@ -1,35 +1,29 @@
-let supabaseClient = null;
-try {
-    supabaseClient = window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY);
-} catch (e) {
-    console.error("Supabase URL 에러: config.js를 확인하세요.", e);
-}
-let currentSession = null;
 let allPosts = []; // 모든 글 목록을 저장할 변수
 
-// 네비게이션 로그인/로그아웃 버튼 세팅
 async function checkAuth() {
-    if (!supabaseClient) return;
-    const { data: { session } } = await supabaseClient.auth.getSession();
-    currentSession = session;
-
+    // Cloudflare Access가 활성되면 보호된 페이지에 접근할 수 있습니다.
+    // 여기서는 단순히 글쓰기 링크만 항상 표시하도록 수정합니다.
     const authLinks = document.getElementById('auth-links');
-    if (session) {
+    if (authLinks) {
         authLinks.innerHTML = `
             <a href="write.html" id="write-link">글쓰기</a>
-            <a href="#" onclick="logout()">로그아웃</a>
-        `;
-    } else {
-        authLinks.innerHTML = `
-            <a href="login.html" id="login-link">로그인</a>
+            <a href="#" onclick="logout()" id="logout-link" style="margin-left: 1rem; color: #7f8c8d; font-size: 0.9rem;">로그아웃</a>
         `;
     }
 }
 
-window.logout = async function () {
-    await supabaseClient.auth.signOut();
-    alert('로그아웃 되었습니다.');
-    window.location.reload();
+// 로그아웃은 Cloudflare Access의 /cdn-cgi/access/logout 경로를 사용하게 됩니다.
+window.logout = function () {
+    if (confirm('로그아웃 하시겠습니까?')) {
+        // 로컬 개발 환경에서는 Cloudflare 전용 경로(/cdn-cgi/...)가 없으므로 홈으로 리다이렉트만 합니다.
+        if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+            alert('로컬 환경에서는 세션 초기화 후 홈으로 이동합니다.');
+            window.location.href = 'index.html';
+        } else {
+            // 실제 배포 환경
+            window.location.href = '/cdn-cgi/access/logout';
+        }
+    }
 }
 
 const contentDiv = document.getElementById('content');
@@ -61,26 +55,13 @@ if (sidebarToggleBtn && sidebar) {
 
 async function loadSidebarPosts() {
     const sidebarListDiv = document.getElementById('sidebar-post-list');
-    if (!sidebarListDiv || !supabaseClient) return;
+    if (!sidebarListDiv) return;
 
     try {
-        const cached = sessionStorage.getItem('sidebar_posts');
+        const response = await fetch(`${window.API_URL}/posts`);
+        if (!response.ok) throw new Error('Failed to fetch posts');
 
-        if (cached) {
-            allPosts = JSON.parse(cached);
-        } else {
-            const { data, error } = await supabaseClient
-                .from('posts')
-                .select('id, title, created_at')
-                .order('created_at', { ascending: false });
-
-            if (error) throw error;
-            allPosts = data || [];
-
-            // 캐시 저장
-            sessionStorage.setItem('sidebar_posts', JSON.stringify(allPosts));
-        }
-
+        allPosts = await response.json();
         renderSidebarPosts(allPosts);
         setupSearch();
     } catch (error) {
@@ -116,27 +97,36 @@ function setupSearch() {
     const searchInput = document.getElementById('post-search');
     if (!searchInput) return;
 
-    // 기존 이벤트 리스너 제거 효과를 위해 새로 등록 (중복 호출 방지)
+    let debounceTimer;
     searchInput.oninput = (e) => {
-        const query = e.target.value.toLowerCase().trim();
-        const filtered = allPosts.filter(post =>
-            post.title.toLowerCase().includes(query)
-        );
-        renderSidebarPosts(filtered);
+        clearTimeout(debounceTimer);
+        const query = e.target.value.trim();
+
+        if (!query) {
+            renderSidebarPosts(allPosts);
+            return;
+        }
+
+        // 실시간 벡터 검색 (디바운싱 적용)
+        debounceTimer = setTimeout(async () => {
+            try {
+                const response = await fetch(`${window.API_URL}/search?q=${encodeURIComponent(query)}`);
+                if (!response.ok) throw new Error('Search failed');
+                const results = await response.json();
+                renderSidebarPosts(results);
+            } catch (err) {
+                console.error('Vector search error:', err);
+            }
+        }, 300);
     };
 }
 
 async function loadHome() {
-    // 키가 입력되지 않거나 올바르지 않은 경우 안내
-    if (!supabaseClient || window.SUPABASE_URL.includes('여기에') || !window.SUPABASE_URL.startsWith('http')) {
-        contentDiv.innerHTML = '<p style="color:red; font-weight:bold; font-size: 1.2rem;">config.js 파일에 올바른 Supabase URL (https://...)과 Anon Key를 입력해주세요!</p>';
-        return;
-    }
-
     contentDiv.innerHTML = `
         <div style="text-align: center; padding: 3rem 0;">
-            <h2 style="color: var(--primary-color);">My Simple Blog</h2>
+            <h2 style="color: var(--primary-color);">My Cloudflare Blog</h2>
             <p style="color: #7f8c8d; margin-top: 1rem;">왼쪽 메뉴에서 글을 선택하여 읽어보세요.</p>
+            <p style="font-size: 0.8rem; color: #bdc3c7; margin-top: 0.5rem;">Semantic Search powered by Cloudflare Vectorize</p>
         </div>
     `;
 }
@@ -145,41 +135,21 @@ async function loadHome() {
 async function loadPost(postId) {
     showLoading();
     try {
-        let post = null;
-        const cachedPost = sessionStorage.getItem('post_' + postId);
-
-        if (cachedPost) {
-            post = JSON.parse(cachedPost);
-        } else {
-            // 특정 id의 포스트 한 개만 가져오기
-            const { data, error } = await supabaseClient
-                .from('posts')
-                .select('*')
-                .eq('id', postId)
-                .single();
-
-            if (error) throw error;
-            if (!data) throw new Error('Post not found');
-
-            post = data;
-            // 캐시 저장
-            sessionStorage.setItem('post_' + postId, JSON.stringify(post));
-        }
+        const response = await fetch(`${window.API_URL}/posts/${postId}`);
+        if (!response.ok) throw new Error('Post not found');
+        const post = await response.json();
 
         const dateStr = new Date(post.created_at).toLocaleDateString('ko-KR');
 
-        // marked.js로 markdown 문자열을 html로 변환하여 렌더링
         let html = `
             <div class="markdown-body">
                 <h1>${post.title}</h1>
                 <p class="post-date" style="margin-bottom: 2rem; border-bottom: 1px solid #eee; padding-bottom: 1rem;">${dateStr}</p>
                 ${marked.parse(post.content)}
-                ${currentSession ? `
                 <div style="margin-top: 3rem; text-align:right;">
                     <a href="write.html#${post.id}" style="color:var(--primary-color); text-decoration:none; margin-right: 1rem; font-weight:bold;">글 수정</a>
                     <button onclick="deletePost('${post.id}')" style="background:none; border:none; color:red; cursor:pointer; font-weight:bold;">글 삭제</button>
                 </div>
-                ` : ''}
             </div>
         `;
         contentDiv.innerHTML = html;
@@ -196,25 +166,17 @@ window.deletePost = async function (postId) {
     if (!confirm('정말로 이 글을 삭제하시겠습니까?')) return;
 
     try {
-        const { error } = await supabaseClient
-            .from('posts')
-            .delete()
-            .eq('id', postId);
+        const response = await fetch(`${window.API_URL}/posts/${postId}`, {
+            method: 'DELETE'
+        });
 
-        if (error) throw error;
-
-        // 삭제 후 캐시 무효화
-        sessionStorage.removeItem('sidebar_posts');
-        sessionStorage.removeItem('post_' + postId);
+        if (!response.ok) throw new Error('Delete failed');
 
         alert('삭제되었습니다.');
-
-        // 목록 다시 로드
         await loadSidebarPosts();
-
         window.location.hash = ''; // 홈으로 이동
     } catch (error) {
-        alert('삭제 실패: RLS 정책을 확인하거나 콘솔창을 확인하세요.');
+        alert('삭제 실패: API 연결을 확인하세요.');
         console.error('Error deleting post:', error);
     }
 }

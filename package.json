@@ -4,5 +4,8 @@
   "description": "My Simple Blog",
   "scripts": {
     "dev": "npx serve ."
+  },
+  "devDependencies": {
+    "wrangler": "^4.68.1"
   }
 }

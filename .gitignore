@@ -1,0 +1,26 @@
+# 의존성
+node_modules/
+.npm/
+.bun/
+
+# Cloudflare Wrangler 관련
+.wrangler/
+dist/
+.dev.vars
+.secret.vars
+
+# 운영체제 관련
+.DS_Store
+Thumbs.db
+
+# 환경 변수 및 로그
+.env
+.env.local
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# 데이터 백업 및 임시 SQL
+*.sql.bak
+posts_rows.sql

@@ -1,0 +1,15 @@
+name = "my-blog-worker"
+main = "src/index.js"
+compatibility_date = "2024-02-26"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "my-blog-db"
+database_id = "0498fc79-d432-4e59-8b16-e42eacd48371"
+
+[[vectorize]]
+binding = "VECTOR_INDEX"
+index_name = "my-blog-index"
+
+[ai]
+binding = "AI"
