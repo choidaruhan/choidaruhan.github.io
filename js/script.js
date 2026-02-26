@@ -5,6 +5,7 @@ try {
     console.error("Supabase URL 에러: config.js를 확인하세요.", e);
 }
 let currentSession = null;
+let allPosts = []; // 모든 글 목록을 저장할 변수
 
 // 네비게이션 로그인/로그아웃 버튼 세팅
 async function checkAuth() {
@@ -63,11 +64,10 @@ async function loadSidebarPosts() {
     if (!sidebarListDiv || !supabaseClient) return;
 
     try {
-        let posts = null;
         const cached = sessionStorage.getItem('sidebar_posts');
 
         if (cached) {
-            posts = JSON.parse(cached);
+            allPosts = JSON.parse(cached);
         } else {
             const { data, error } = await supabaseClient
                 .from('posts')
@@ -75,33 +75,55 @@ async function loadSidebarPosts() {
                 .order('created_at', { ascending: false });
 
             if (error) throw error;
-            posts = data;
+            allPosts = data || [];
 
             // 캐시 저장
-            sessionStorage.setItem('sidebar_posts', JSON.stringify(posts));
+            sessionStorage.setItem('sidebar_posts', JSON.stringify(allPosts));
         }
 
-        if (!posts || posts.length === 0) {
-            sidebarListDiv.innerHTML = '<p style="font-size: 0.9rem; color: #7f8c8d;">게시글이 없습니다.</p>';
-            return;
-        }
-
-        let html = '<ul class="post-list">';
-        posts.forEach(post => {
-            const dateStr = new Date(post.created_at).toLocaleDateString('ko-KR');
-            html += `
-                <li>
-                    <a href="#${post.id}" class="post-title">${post.title}</a>
-                    <span class="post-date">${dateStr}</span>
-                </li>
-            `;
-        });
-        html += '</ul>';
-        sidebarListDiv.innerHTML = html;
+        renderSidebarPosts(allPosts);
+        setupSearch();
     } catch (error) {
         sidebarListDiv.innerHTML = '<p style="font-size: 0.9rem; color: red;">목록을 불러오지 못했습니다.</p>';
         console.error('Error loading sidebar:', error);
     }
+}
+
+function renderSidebarPosts(posts) {
+    const sidebarListDiv = document.getElementById('sidebar-post-list');
+    if (!sidebarListDiv) return;
+
+    if (!posts || posts.length === 0) {
+        sidebarListDiv.innerHTML = '<p style="font-size: 0.9rem; color: #7f8c8d;">게시글이 없습니다.</p>';
+        return;
+    }
+
+    let html = '<ul class="post-list">';
+    posts.forEach(post => {
+        const dateStr = new Date(post.created_at).toLocaleDateString('ko-KR');
+        html += `
+            <li>
+                <a href="#${post.id}" class="post-title">${post.title}</a>
+                <span class="post-date">${dateStr}</span>
+            </li>
+        `;
+    });
+    html += '</ul>';
+    sidebarListDiv.innerHTML = html;
+}
+
+function setupSearch() {
+    const searchInput = document.getElementById('post-search');
+    if (!searchInput) return;
+
+    // 기존 이벤트 리스너 제거 효과를 위해 새로 등록 (중복 호출 방지)
+    searchInput.oninput = (e) => {
+        const query = e.target.value.toLowerCase().trim();
+        const filtered = allPosts.filter(post =>
+            post.title.toLowerCase().includes(query)
+        );
+        renderSidebarPosts(filtered);
+    };
 }
 
 async function loadHome() {
