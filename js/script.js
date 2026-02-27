@@ -2,7 +2,13 @@ let allPosts = []; // 모든 글 목록을 저장할 변수
 
 async function checkAuth() {
     try {
-        const response = await fetch(`${window.API_URL}/auth-check`);
+        const response = await fetch(`${window.API_URL}/auth/me`);
+
+        // HTTP 에러 처리 (404 등)
+        if (!response.ok) {
+            throw new Error(`Auth API error: ${response.status}`);
+        }
+
         const data = await response.json();
 
         const loggedInView = document.getElementById('logged-in-view');
@@ -19,6 +25,11 @@ async function checkAuth() {
         }
     } catch (error) {
         console.error('Auth check failed:', error);
+        // 에러 발생 시(서버 점검 등) 기본적으로 로그인 화면을 보여줍니다.
+        const loggedOutView = document.getElementById('logged-out-view');
+        if (loggedOutView) {
+            loggedOutView.classList.remove('hidden');
+        }
     }
 }
 

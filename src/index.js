@@ -29,8 +29,8 @@ export default {
       return !!jwt;
     };
 
-    // 0. Authentication Check (GET /auth-check)
-    if (path === '/auth-check' && method === 'GET') {
+    // 0. Authentication Check (GET /auth-check or /auth/me)
+    if ((path === '/auth-check' || path === '/auth/me') && method === 'GET') {
       return Response.json({ authorized: isAuthorized(request) }, { headers: corsHeaders });
     }
 
