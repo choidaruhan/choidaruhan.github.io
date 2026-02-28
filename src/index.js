@@ -15,20 +15,65 @@ export default {
       return new Response(null, { headers: corsHeaders });
     }
 
+    // Simplified JWT Implementation for Cloudflare Workers
+    const JWT_SECRET = env.JWT_SECRET || 'your-default-secret-key-for-local';
+
+    async function signJwt(payload) {
+      const header = { alg: 'HS256', typ: 'JWT' };
+      const encoder = new TextEncoder();
+      const stringifiedHeader = JSON.stringify(header);
+      const stringifiedPayload = JSON.stringify({ ...payload, exp: Math.floor(Date.now() / 1000) + (60 * 60 * 24) }); // 24h expiry
+
+      const base64Header = btoa(stringifiedHeader).replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
+      const base64Payload = btoa(stringifiedPayload).replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
+
+      const data = encoder.encode(`${base64Header}.${base64Payload}`);
+      const key = await crypto.subtle.importKey(
+        'raw', encoder.encode(JWT_SECRET),
+        { name: 'HMAC', hash: 'SHA-256' },
+        false, ['sign']
+      );
+      const signature = await crypto.subtle.sign('HMAC', key, data);
+      const base64Signature = btoa(String.fromCharCode(...new Uint8Array(signature)))
+        .replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
+
+      return `${base64Header}.${base64Payload}.${base64Signature}`;
+    }
+
+    async function verifyJwt(token) {
+      if (!token) return null;
+      const parts = token.split('.');
+      if (parts.length !== 3) return null;
+
+      const [header, payload, signature] = parts;
+      const encoder = new TextEncoder();
+      const data = encoder.encode(`${header}.${payload}`);
+
+      const key = await crypto.subtle.importKey(
+        'raw', encoder.encode(JWT_SECRET),
+        { name: 'HMAC', hash: 'SHA-256' },
+        false, ['verify']
+      );
+
+      const sigUint8 = new Uint8Array(atob(signature.replace(/-/g, '+').replace(/_/g, '/')).split('').map(c => c.charCodeAt(0)));
+      const isValid = await crypto.subtle.verify('HMAC', key, sigUint8, data);
+
+      if (!isValid) return null;
+
+      const decodedPayload = JSON.parse(atob(payload.replace(/-/g, '+').replace(/_/g, '/')));
+      if (decodedPayload.exp && Date.now() / 1000 > decodedPayload.exp) return null;
+
+      return decodedPayload;
+    }
+
     // Authentication Helper
     const isAuthorized = async (req) => {
-      // 1. 프론트엔드에서 Authorization 헤더로 발송한 커스텀 세션 토큰 검증
+      // 1. 프론트엔드에서 Authorization 헤더로 발송한 JWT 검증
       const authHeader = req.headers.get('Authorization');
       if (authHeader && authHeader.startsWith('Bearer ')) {
         const token = authHeader.split(' ')[1];
-        try {
-          // sessions 테이블 생성 (최초 실행 시 필요)
-          await env.DB.prepare("CREATE TABLE IF NOT EXISTS sessions (token TEXT PRIMARY KEY, created_at DATETIME DEFAULT CURRENT_TIMESTAMP)").run();
-          const session = await env.DB.prepare("SELECT token FROM sessions WHERE token = ?").bind(token).first();
-          if (session) return true; // 세션이 존재하면 인증 성공
-        } catch (e) {
-          console.error('Session DB Error:', e);
-        }
+        const payload = await verifyJwt(token);
+        if (payload) return true;
       }
 
       // 2. Cloudflare Access가 활성화되어 전달된 헤더 검증 (직접 접근 시)
@@ -50,24 +95,21 @@ export default {
     }
 
     // 0-2. Login Session Generation & Redirect (GET /login)
-    // 이 경로는 Cloudflare Access의 보호를 받도록 설정해야 합니다.
     if (path === '/login' && method === 'GET') {
       const jwt = request.headers.get('Cf-Access-Jwt-Assertion');
       const defaultRedirect = 'https://choidaruhan.github.io/';
       const redirectUrl = url.searchParams.get('redirect') || defaultRedirect;
 
-      // 로컬 환경이거나, Cloudflare Access 인증 헤더가 있는 경우 세션 발급
       const host = request.headers.get('Host') || '';
       const isLocal = host.includes('localhost') || host.includes('127.0.0.1') || host.includes(':8787');
 
       if (jwt || isLocal) {
         try {
-          // 세션 테이블 확인 및 UUID 토큰 발급
-          await env.DB.prepare("CREATE TABLE IF NOT EXISTS sessions (token TEXT PRIMARY KEY, created_at DATETIME DEFAULT CURRENT_TIMESTAMP)").run();
-          const sessionToken = crypto.randomUUID();
-          await env.DB.prepare("INSERT INTO sessions (token) VALUES (?)").bind(sessionToken).run();
+          // Cloudflare Access JWT를 파싱하여 사용자 정보 추출 (필요한 경우)
+          // 여기서는 단순히 성공 인증 시 자체 JWT를 발급함
+          const sessionToken = await signJwt({ sub: 'admin', iat: Math.floor(Date.now() / 1000) });
 
-          // 프론트엔드로 토큰을 URL 해시에 담아 리다이렉트 (안전한 전달)
+          // 프론트엔드로 토큰을 URL 해시에 담아 리다이렉트
           return Response.redirect(`${redirectUrl}#access_token=${sessionToken}`, 302);
         } catch (e) {
           return new Response("Session creation failed", { status: 500, headers: corsHeaders });
