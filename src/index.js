@@ -6,9 +6,9 @@ export default {
 
     // CORS Headers
     const corsHeaders = {
-      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Origin': '*', // 필요 시 choidaruhan.github.io로 제한 가능
       'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
     };
 
     if (method === 'OPTIONS') {
@@ -16,22 +16,68 @@ export default {
     }
 
     // Authentication Helper
-    const isAuthorized = (req) => {
-      // Cloudflare Access가 활성화되면 이 헤더에 JWT가 포함됩니다.
+    const isAuthorized = async (req) => {
+      // 1. 프론트엔드에서 Authorization 헤더로 발송한 커스텀 세션 토큰 검증
+      const authHeader = req.headers.get('Authorization');
+      if (authHeader && authHeader.startsWith('Bearer ')) {
+        const token = authHeader.split(' ')[1];
+        try {
+          // sessions 테이블 생성 (최초 실행 시 필요)
+          await env.DB.prepare("CREATE TABLE IF NOT EXISTS sessions (token TEXT PRIMARY KEY, created_at DATETIME DEFAULT CURRENT_TIMESTAMP)").run();
+          const session = await env.DB.prepare("SELECT token FROM sessions WHERE token = ?").bind(token).first();
+          if (session) return true; // 세션이 존재하면 인증 성공
+        } catch (e) {
+          console.error('Session DB Error:', e);
+        }
+      }
+
+      // 2. Cloudflare Access가 활성화되어 전달된 헤더 검증 (직접 접근 시)
       const jwt = req.headers.get('Cf-Access-Jwt-Assertion');
 
-      // 로컬 개발 환경(localhost)에서는 헤더가 없어도 허용합니다.
-      const origin = req.headers.get('Origin') || '';
-      if (!jwt && (origin.includes('localhost') || origin.includes('127.0.0.1'))) {
+      // 로컬 개발 환경(wrangler dev)에서는 편의상 허용
+      const host = req.headers.get('Host') || '';
+      if (!jwt && !authHeader && (host.includes('localhost') || host.includes('127.0.0.1') || host.includes(':8787'))) {
         return true;
       }
 
       return !!jwt;
     };
 
-    // 0. Authentication Check (GET /auth-check or /auth/me)
+    // 0-1. Authentication Check (GET /auth-check or /auth/me)
     if ((path === '/auth-check' || path === '/auth/me') && method === 'GET') {
-      return Response.json({ authorized: isAuthorized(request) }, { headers: corsHeaders });
+      const authorized = await isAuthorized(request);
+      return Response.json({ authorized }, { headers: corsHeaders });
+    }
+
+    // 0-2. Login Session Generation & Redirect (GET /login)
+    // 이 경로는 Cloudflare Access의 보호를 받도록 설정해야 합니다.
+    if (path === '/login' && method === 'GET') {
+      const jwt = request.headers.get('Cf-Access-Jwt-Assertion');
+      const defaultRedirect = 'https://choidaruhan.github.io/';
+      const redirectUrl = url.searchParams.get('redirect') || defaultRedirect;
+
+      // 로컬 환경이거나, Cloudflare Access 인증 헤더가 있는 경우 세션 발급
+      const host = request.headers.get('Host') || '';
+      const isLocal = host.includes('localhost') || host.includes('127.0.0.1') || host.includes(':8787');
+
+      if (jwt || isLocal) {
+        try {
+          // 세션 테이블 확인 및 UUID 토큰 발급
+          await env.DB.prepare("CREATE TABLE IF NOT EXISTS sessions (token TEXT PRIMARY KEY, created_at DATETIME DEFAULT CURRENT_TIMESTAMP)").run();
+          const sessionToken = crypto.randomUUID();
+          await env.DB.prepare("INSERT INTO sessions (token) VALUES (?)").bind(sessionToken).run();
+
+          // 프론트엔드로 토큰을 URL 해시에 담아 리다이렉트 (안전한 전달)
+          return Response.redirect(`${redirectUrl}#access_token=${sessionToken}`, 302);
+        } catch (e) {
+          return new Response("Session creation failed", { status: 500, headers: corsHeaders });
+        }
+      } else {
+        return new Response(`
+          <h1>Unauthorized</h1>
+          <p>This endpoint requires Cloudflare Access protection. Please configure your Cloudflare Access policy to protect <code>/login</code>.</p>
+        `, { status: 401, headers: { ...corsHeaders, 'Content-Type': 'text/html' } });
+      }
     }
 
     try {
@@ -55,7 +101,7 @@ export default {
 
       // 3. 글 작성/수정 (POST /posts) - 보호됨
       if (path === '/posts' && method === 'POST') {
-        if (!isAuthorized(request)) {
+        if (!(await isAuthorized(request))) {
           return new Response("Unauthorized", { status: 401, headers: corsHeaders });
         }
 
@@ -99,7 +145,7 @@ export default {
 
       // 4. 글 삭제 (DELETE /posts/:id) - 보호됨
       if (path.startsWith('/posts/') && method === 'DELETE') {
-        if (!isAuthorized(request)) {
+        if (!(await isAuthorized(request))) {
           return new Response("Unauthorized", { status: 401, headers: corsHeaders });
         }
 

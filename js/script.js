@@ -1,8 +1,18 @@
 let allPosts = []; // 모든 글 목록을 저장할 변수
 
+// API 호출 시 인증 토큰을 자동으로 포함하는 유틸리티 함수
+async function fetchWithAuth(url, options = {}) {
+    const token = localStorage.getItem('cf_access_token');
+    const headers = { ...options.headers };
+    if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+    }
+    return fetch(url, { ...options, headers });
+}
+
 async function checkAuth() {
     try {
-        const response = await fetch(`${window.API_URL}/auth/me`);
+        const response = await fetchWithAuth(`${window.API_URL}/auth/me`);
 
         // HTTP 에러 처리 (404 등)
         if (!response.ok) {
@@ -22,6 +32,12 @@ async function checkAuth() {
         } else {
             loggedInView.classList.add('hidden');
             loggedOutView.classList.remove('hidden');
+
+            // 로그인 링크의 대상을 API의 /login 라우트로 변경합니다.
+            const loginLink = document.getElementById('login-link');
+            if (loginLink) {
+                loginLink.href = `${window.API_URL}/login?redirect=${encodeURIComponent(window.location.origin + window.location.pathname)}`;
+            }
         }
     } catch (error) {
         console.error('Auth check failed:', error);
@@ -33,17 +49,12 @@ async function checkAuth() {
     }
 }
 
-// 로그아웃은 Cloudflare Access의 /cdn-cgi/access/logout 경로를 사용하게 됩니다.
+// 로그아웃 처리는 토큰을 삭제하고 UI를 새로고침합니다.
 window.logout = function () {
     if (confirm('로그아웃 하시겠습니까?')) {
-        // 로컬 개발 환경에서는 Cloudflare 전용 경로(/cdn-cgi/...)가 없으므로 홈으로 리다이렉트만 합니다.
-        if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-            alert('로컬 환경에서는 세션 초기화 후 홈으로 이동합니다.');
-            window.location.href = 'index.html';
-        } else {
-            // 실제 배포 환경
-            window.location.href = '/cdn-cgi/access/logout';
-        }
+        localStorage.removeItem('cf_access_token');
+        alert('로그아웃 되었습니다.');
+        window.location.reload();
     }
 }
 
@@ -199,7 +210,7 @@ window.deletePost = async function (postId) {
     if (!confirm('정말로 이 글을 삭제하시겠습니까?')) return;
 
     try {
-        const response = await fetch(`${window.API_URL}/posts/${postId}`, {
+        const response = await fetchWithAuth(`${window.API_URL}/posts/${postId}`, {
             method: 'DELETE'
         });
 
@@ -233,6 +244,18 @@ homeLink.addEventListener('click', (e) => {
 // URL hash 이벤트(뒤로가기, 글 클릭 등) 처리
 window.addEventListener('hashchange', () => {
     const hash = window.location.hash.slice(1);
+
+    // Cloudflare 인증 후 돌아온 경우 토큰 저장
+    if (hash.startsWith('access_token=')) {
+        const token = hash.split('=')[1];
+        localStorage.setItem('cf_access_token', token);
+        // 토큰을 URL에서 숨기기 위해 해시 제거
+        history.replaceState("", document.title, window.location.pathname + window.location.search);
+        checkAuth(); // 인증 상태 갱신
+        loadHome();
+        return;
+    }
+
     if (hash) {
         loadPost(hash);
     } else {
@@ -242,12 +265,22 @@ window.addEventListener('hashchange', () => {
 
 // 페이지 초기 진입 시 라우팅
 window.addEventListener('load', async () => {
+    const hash = window.location.hash.slice(1);
+
+    // Cloudflare 인증 후 돌아온 경우 토큰 저장
+    if (hash.startsWith('access_token=')) {
+        const token = hash.split('=')[1];
+        localStorage.setItem('cf_access_token', token);
+        history.replaceState("", document.title, window.location.pathname + window.location.search);
+    }
+
     await checkAuth();
     await loadSidebarPosts();
 
-    const hash = window.location.hash.slice(1);
-    if (hash) {
-        loadPost(hash);
+    // 토큰 해시 처리를 이미 했다면 홈으로, 아니면 기존 해시(글 ID)로 이동
+    const currentHash = window.location.hash.slice(1);
+    if (currentHash && !currentHash.startsWith('access_token=')) {
+        loadPost(currentHash);
     } else {
         loadHome();
     }

@@ -62,9 +62,15 @@ writeForm.addEventListener('submit', async (e) => {
   submitBtn.innerText = '저장 중...';
 
   try {
+    const token = localStorage.getItem('cf_access_token');
+    const headers = { 'Content-Type': 'application/json' };
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
     const response = await fetch(`${window.API_URL}/posts`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: headers,
       body: JSON.stringify({ id, title, content })
     });
 
