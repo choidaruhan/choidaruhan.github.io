@@ -23,15 +23,18 @@ async function checkAuth() {
 
         const loggedInView = document.getElementById('logged-in-view');
         const loggedOutView = document.getElementById('logged-out-view');
+        const adminControls = document.getElementById('admin-controls');
 
         if (!loggedInView || !loggedOutView) return;
 
         if (data.authorized) {
             loggedInView.classList.remove('hidden');
             loggedOutView.classList.add('hidden');
+            if (adminControls) adminControls.classList.remove('hidden');
         } else {
             loggedInView.classList.add('hidden');
             loggedOutView.classList.remove('hidden');
+            if (adminControls) adminControls.classList.add('hidden');
 
             // 로그인 링크의 대상을 API의 /login 라우트로 변경합니다.
             const loginLink = document.getElementById('login-link');
