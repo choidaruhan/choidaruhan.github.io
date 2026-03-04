@@ -108,7 +108,7 @@ function renderSidebarPosts(posts, isSearch = false) {
     const sidebarListDiv = document.getElementById('sidebar-post-list');
     if (!sidebarListDiv) return;
 
-    if (!posts || posts.length === 0) {
+    if (!Array.isArray(posts) || posts.length === 0) {
         if (isSearch) {
             sidebarListDiv.innerHTML = '<p style="font-size: 0.9rem; color: #7f8c8d; text-align: center; padding: 1rem;">검색 결과가 없습니다.</p>';
         } else {
@@ -119,10 +119,10 @@ function renderSidebarPosts(posts, isSearch = false) {
 
     let html = '<ul class="post-list">';
     posts.forEach(post => {
-        const dateStr = new Date(post.created_at).toLocaleDateString('ko-KR');
+        const dateStr = post.created_at ? new Date(post.created_at).toLocaleDateString('ko-KR') : '날짜 없음';
         html += `
             <li>
-                <a href="#${post.id}" class="post-title">${post.title}</a>
+                <a href="#${post.id}" class="post-title">${post.title || '제목 없음'}</a>
                 <span class="post-date">${dateStr}</span>
             </li>
         `;
@@ -137,8 +137,8 @@ function setupSearch() {
 
     let debounceTimer;
     searchInput.oninput = (e) => {
-        clearTimeout(debounceTimer);
         const query = e.target.value.trim();
+        clearTimeout(debounceTimer);
 
         if (!query) {
             renderSidebarPosts(allPosts);
@@ -147,19 +147,25 @@ function setupSearch() {
 
         // 실시간 검색 (디바운싱 적용)
         debounceTimer = setTimeout(async () => {
+            console.log(`Searching for: ${query}`);
             try {
                 const response = await fetch(`${window.API_URL}/search?q=${encodeURIComponent(query)}`);
-                if (!response.ok) throw new Error('Search failed');
+                if (!response.ok) throw new Error(`Search failed: ${response.status}`);
+
                 const results = await response.json();
+                console.log('Search results:', results);
                 renderSidebarPosts(results, true);
             } catch (err) {
                 console.error('Search error:', err);
                 const sidebarListDiv = document.getElementById('sidebar-post-list');
                 if (sidebarListDiv) {
-                    sidebarListDiv.innerHTML = '<p style="font-size: 0.9rem; color: red;">검색 중 오류가 발생했습니다.</p>';
+                    sidebarListDiv.innerHTML = `<p style="font-size: 0.8rem; color: #e74c3c; text-align: center; padding: 1rem;">
+                        검색 중 오류가 발생했습니다.<br>
+                        <small>${err.message}</small>
+                    </p>`;
                 }
             }
-        }, 300);
+        }, 400); // 300ms -> 400ms로 약간 지연 시간 증가
     };
 }
 

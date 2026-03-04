@@ -162,9 +162,9 @@ export default {
             text: [title, content].join(' ')
           });
           values = embeddingResponse.data[0];
+          console.log(`Vector embedding generated for post ${id}`);
         } catch (aiError) {
-          console.error("AI embedding generation failed:", aiError);
-          // AI 실패 시 빈 벡터를 전달하거나 기본 처리를 합니다.
+          console.error(`AI embedding generation failed for post ${id}:`, aiError);
         }
 
         // Vectorize 인덱스 업데이트
@@ -177,8 +177,9 @@ export default {
                 metadata: { title }
               }
             ]);
+            console.log(`Vectorize upsert successful for post ${id}`);
           } catch (vError) {
-            console.error("Vectorize upsert failed (Expected in local dev):", vError);
+            console.error(`Vectorize upsert failed for post ${id}:`, vError);
           }
         }
 
@@ -209,6 +210,8 @@ export default {
         const query = url.searchParams.get('q');
         if (!query) return new Response("Missing query", { status: 400, headers: corsHeaders });
 
+        console.log(`Search request received for query: "${query}"`);
+
         let results = [];
         let vectorIds = [];
 
@@ -238,10 +241,15 @@ export default {
                 const match = matches.matches.find(m => m.id === post.id);
                 return { ...post, score: match ? match.score : 0, method: 'vector' };
               });
+              console.log(`Vector search returned ${results.length} results`);
+            } else {
+              console.log("Vectorize returned no matches");
             }
+          } else {
+            console.warn("Vectorize or AI binding missing");
           }
         } catch (vError) {
-          console.error("Vector search failed, falling back to SQL:", vError);
+          console.error("Vector search failed:", vError);
         }
 
         // 5-2. SQL LIKE 검색 (Fallback 또는 보완)
@@ -250,6 +258,8 @@ export default {
           const { results: sqlPosts } = await env.DB.prepare(
             "SELECT id, title, created_at FROM posts WHERE title LIKE ? OR content LIKE ? ORDER BY created_at DESC LIMIT 10"
           ).bind(sqlQuery, sqlQuery).all();
+
+          console.log(`SQL LIKE search returned ${sqlPosts.length} results`);
 
           // 벡터 결과에 없는 항목들을 추가
           sqlPosts.forEach(post => {
@@ -264,7 +274,12 @@ export default {
         // 결과 정렬 (점수 높은 순)
         results.sort((a, b) => b.score - a.score);
 
-        return Response.json(results, { headers: corsHeaders });
+        return Response.json(results, {
+          headers: {
+            ...corsHeaders,
+            'X-Search-Method': vectorIds.length > 0 ? 'hybrid' : 'sql'
+          }
+        });
       }
 
       return new Response("Not Found", { status: 404, headers: corsHeaders });
