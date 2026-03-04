@@ -141,6 +141,58 @@ export default {
         return Response.json(post, { headers: corsHeaders });
       }
 
+      // 2-1. 전체 재색인 (POST /reindex) - 보호됨
+      if (path === '/reindex' && method === 'POST') {
+        if (!(await isAuthorized(request))) {
+          return new Response("Unauthorized", { status: 401, headers: corsHeaders });
+        }
+
+        console.log("Starting full re-indexing...");
+        try {
+          // 모든 포스트 가져오기
+          const { results: allPosts } = await env.DB.prepare(
+            "SELECT id, title, content FROM posts"
+          ).all();
+
+          console.log(`Found ${allPosts.length} posts to re-index`);
+
+          let successCount = 0;
+          let failCount = 0;
+
+          // 각 포스트에 대해 임베딩 생성 및 업서트
+          for (const post of allPosts) {
+            try {
+              const embeddingResponse = await env.AI.run('@cf/baai/bge-small-en-v1.5', {
+                text: [post.title, post.content].join(' ')
+              });
+              const values = embeddingResponse.data[0];
+
+              await env.VECTOR_INDEX.upsert([
+                {
+                  id: post.id,
+                  values: values,
+                  metadata: { title: post.title }
+                }
+              ]);
+              successCount++;
+            } catch (e) {
+              console.error(`Failed to index post ${post.id}:`, e);
+              failCount++;
+            }
+          }
+
+          return Response.json({
+            success: true,
+            total: allPosts.length,
+            indexed: successCount,
+            failed: failCount
+          }, { headers: corsHeaders });
+        } catch (error) {
+          console.error("Re-indexing failed:", error);
+          return Response.json({ success: false, error: error.message }, { status: 500, headers: corsHeaders });
+        }
+      }
+
       // 3. 글 작성/수정 (POST /posts) - 보호됨
       if (path === '/posts' && method === 'POST') {
         if (!(await isAuthorized(request))) {
@@ -252,7 +304,7 @@ export default {
           console.error("Vector search failed:", vError);
         }
 
-        // 5-2. SQL LIKE 검색 (Fallback 또는 보완)
+        // SQL LIKE 검색 (Fallback 또는 보완)
         try {
           const sqlQuery = `%${query}%`;
           const { results: sqlPosts } = await env.DB.prepare(
@@ -261,10 +313,17 @@ export default {
 
           console.log(`SQL LIKE search returned ${sqlPosts.length} results`);
 
-          // 벡터 결과에 없는 항목들을 추가
+          // 기존 결과(결과 리스트)에 포함되지 않은 항목들을 추가
           sqlPosts.forEach(post => {
-            if (!vectorIds.includes(post.id)) {
-              results.push({ ...post, score: 0.5, method: 'sql' }); // SQL 결과는 중간 계수 부여
+            if (!results.some(r => r.id === post.id)) {
+              results.push({ ...post, score: 0.6, method: 'sql' }); // SQL 결과 점수 약간 상향
+            } else {
+              // 이미 벡터 결과에 있는 경우라도 제목이 완전히 포함되어 있다면 점수 보정 (Optional)
+              const existingIndex = results.findIndex(r => r.id === post.id);
+              if (existingIndex !== -1 && results[existingIndex].score < 0.6) {
+                results[existingIndex].score = 0.7; // SQL 매칭 시 최소 점수 보장
+                results[existingIndex].method = 'hybrid-sql-boost';
+              }
             }
           });
         } catch (sError) {

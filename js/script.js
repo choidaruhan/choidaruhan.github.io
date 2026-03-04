@@ -223,6 +223,35 @@ async function loadPost(postId) {
     }
 }
 
+window.reindexPosts = async function () {
+    if (!confirm('모든 게시글을 검색 엔진에 다시 등록하시겠습니까?\n글이 많을 경우 시간이 걸릴 수 있습니다.')) return;
+
+    const btn = document.getElementById('reindex-btn');
+    if (btn) {
+        btn.disabled = true;
+        btn.textContent = '재색인 중...';
+    }
+
+    try {
+        const response = await fetchWithAuth(`${window.API_URL}/reindex`, {
+            method: 'POST'
+        });
+
+        if (!response.ok) throw new Error(`Re-index failed: ${response.status}`);
+
+        const result = await response.json();
+        alert(`재색인이 완료되었습니다.\n성공: ${result.indexed}, 실패: ${result.failed}`);
+    } catch (error) {
+        alert('재색인 실패: ' + error.message);
+        console.error('Error re-indexing:', error);
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.textContent = '검색 재색인';
+        }
+    }
+}
+
 window.deletePost = async function (postId) {
     if (!confirm('정말로 이 글을 삭제하시겠습니까?')) return;
 
