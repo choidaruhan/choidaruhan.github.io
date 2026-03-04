@@ -1,3 +1,5 @@
+import { fetchPost, createPost } from './api.js';
+
 // 전역 변수 및 DOM 요소
 const writeForm = document.getElementById('write-form');
 const submitBtn = document.getElementById('submit-btn');
@@ -27,9 +29,7 @@ async function init() {
     document.title = '글 수정 - Simple Blog';
 
     try {
-      const response = await fetch(`${window.API_URL}/posts/${editPostId}`);
-      if (!response.ok) throw new Error('Failed to fetch post');
-      const post = await response.json();
+      const post = await fetchPost(editPostId);
 
       if (post) {
         titleInput.value = post.title;
@@ -62,19 +62,7 @@ writeForm.addEventListener('submit', async (e) => {
   submitBtn.innerText = '저장 중...';
 
   try {
-    const token = localStorage.getItem('cf_access_token');
-    const headers = { 'Content-Type': 'application/json' };
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
-    }
-
-    const response = await fetch(`${window.API_URL}/posts`, {
-      method: 'POST',
-      headers: headers,
-      body: JSON.stringify({ id, title, content })
-    });
-
-    if (!response.ok) throw new Error('Save failed');
+    await createPost(id, title, content);
 
     alert(editPostId ? '글이 성공적으로 수정되었습니다!' : '글이 성공적으로 등록되었습니다!');
     window.location.href = editPostId ? `index.html#${editPostId}` : 'index.html';

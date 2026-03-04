@@ -1,65 +1,7 @@
+import { fetchPosts, fetchPost, deletePostApi, searchPosts } from './api.js';
+import { checkAuth } from './auth.js';
+
 let allPosts = []; // 모든 글 목록을 저장할 변수
-
-// API 호출 시 인증 토큰을 자동으로 포함하는 유틸리티 함수
-async function fetchWithAuth(url, options = {}) {
-    const token = localStorage.getItem('cf_access_token');
-    const headers = { ...options.headers };
-    if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-    }
-    return fetch(url, { ...options, headers });
-}
-
-async function checkAuth() {
-    try {
-        const response = await fetchWithAuth(`${window.API_URL}/auth/me`);
-
-        // HTTP 에러 처리 (404 등)
-        if (!response.ok) {
-            throw new Error(`Auth API error: ${response.status}`);
-        }
-
-        const data = await response.json();
-
-        const loggedInView = document.getElementById('logged-in-view');
-        const loggedOutView = document.getElementById('logged-out-view');
-        const adminControls = document.getElementById('admin-controls');
-
-        if (!loggedInView || !loggedOutView) return;
-
-        if (data.authorized) {
-            loggedInView.classList.remove('hidden');
-            loggedOutView.classList.add('hidden');
-            if (adminControls) adminControls.classList.remove('hidden');
-        } else {
-            loggedInView.classList.add('hidden');
-            loggedOutView.classList.remove('hidden');
-            if (adminControls) adminControls.classList.add('hidden');
-
-            // 로그인 링크의 대상을 API의 /login 라우트로 변경합니다.
-            const loginLink = document.getElementById('login-link');
-            if (loginLink) {
-                loginLink.href = `${window.API_URL}/login?redirect=${encodeURIComponent(window.location.origin + window.location.pathname)}`;
-            }
-        }
-    } catch (error) {
-        console.error('Auth check failed:', error);
-        // 에러 발생 시(서버 점검 등) 기본적으로 로그인 화면을 보여줍니다.
-        const loggedOutView = document.getElementById('logged-out-view');
-        if (loggedOutView) {
-            loggedOutView.classList.remove('hidden');
-        }
-    }
-}
-
-// 로그아웃 처리는 토큰을 삭제하고 UI를 새로고침합니다.
-window.logout = function () {
-    if (confirm('로그아웃 하시겠습니까?')) {
-        localStorage.removeItem('cf_access_token');
-        alert('로그아웃 되었습니다.');
-        window.location.reload();
-    }
-}
 
 const loadingDiv = document.getElementById('loading');
 const homeLink = document.getElementById('home-link');
@@ -92,10 +34,7 @@ async function loadSidebarPosts() {
     if (!sidebarListDiv) return;
 
     try {
-        const response = await fetch(`${window.API_URL}/posts`);
-        if (!response.ok) throw new Error('Failed to fetch posts');
-
-        allPosts = await response.json();
+        allPosts = await fetchPosts();
         renderSidebarPosts(allPosts);
         setupSearch();
     } catch (error) {
@@ -149,10 +88,7 @@ function setupSearch() {
         debounceTimer = setTimeout(async () => {
             console.log(`Searching for: ${query}`);
             try {
-                const response = await fetch(`${window.API_URL}/search?q=${encodeURIComponent(query)}`);
-                if (!response.ok) throw new Error(`Search failed: ${response.status}`);
-
-                const results = await response.json();
+                const results = await searchPosts(query);
                 console.log('Search results:', results);
                 renderSidebarPosts(results, true);
             } catch (err) {
@@ -165,7 +101,7 @@ function setupSearch() {
                     </p>`;
                 }
             }
-        }, 400); // 300ms -> 400ms로 약간 지연 시간 증가
+        }, 400);
     };
 }
 
@@ -193,10 +129,7 @@ async function loadPost(postId) {
 
     showLoading();
     try {
-        const response = await fetch(`${window.API_URL}/posts/${postId}`);
-        if (!response.ok) throw new Error('Post not found');
-        const post = await response.json();
-
+        const post = await fetchPost(postId);
         const dateStr = new Date(post.created_at).toLocaleDateString('ko-KR');
 
         const titleDisplay = document.getElementById('post-title-display');
@@ -227,12 +160,7 @@ window.deletePost = async function (postId) {
     if (!confirm('정말로 이 글을 삭제하시겠습니까?')) return;
 
     try {
-        const response = await fetchWithAuth(`${window.API_URL}/posts/${postId}`, {
-            method: 'DELETE'
-        });
-
-        if (!response.ok) throw new Error('Delete failed');
-
+        await deletePostApi(postId);
         alert('삭제되었습니다.');
         await loadSidebarPosts();
         window.location.hash = ''; // 홈으로 이동

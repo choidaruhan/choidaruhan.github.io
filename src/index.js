@@ -1,201 +1,27 @@
+import { corsHeaders, handleOptions } from './utils/cors.js';
+import { handleAuthRoutes } from './routes/auth.js';
+import { handlePostsRoutes } from './routes/posts.js';
+import { handleSearchRoutes } from './routes/search.js';
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
     const path = url.pathname;
-    const method = request.method;
 
-    // CORS Headers
-    const corsHeaders = {
-      'Access-Control-Allow-Origin': '*', // 필요 시 choidaruhan.github.io로 제한 가능
-      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-    };
+    const optionsResponse = handleOptions(request);
+    if (optionsResponse) return optionsResponse;
 
-    if (method === 'OPTIONS') {
-      return new Response(null, { headers: corsHeaders });
-    }
-
-    // Simplified JWT Implementation for Cloudflare Workers
     const JWT_SECRET = env.JWT_SECRET || 'your-default-secret-key-for-local';
 
-    async function signJwt(payload) {
-      const header = { alg: 'HS256', typ: 'JWT' };
-      const encoder = new TextEncoder();
-      const stringifiedHeader = JSON.stringify(header);
-      const stringifiedPayload = JSON.stringify({ ...payload, exp: Math.floor(Date.now() / 1000) + (60 * 60 * 24) }); // 24h expiry
-
-      const base64Header = btoa(stringifiedHeader).replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
-      const base64Payload = btoa(stringifiedPayload).replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
-
-      const data = encoder.encode(`${base64Header}.${base64Payload}`);
-      const key = await crypto.subtle.importKey(
-        'raw', encoder.encode(JWT_SECRET),
-        { name: 'HMAC', hash: 'SHA-256' },
-        false, ['sign']
-      );
-      const signature = await crypto.subtle.sign('HMAC', key, data);
-      const base64Signature = btoa(String.fromCharCode(...new Uint8Array(signature)))
-        .replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
-
-      return `${base64Header}.${base64Payload}.${base64Signature}`;
-    }
-
-    async function verifyJwt(token) {
-      if (!token) return null;
-      const parts = token.split('.');
-      if (parts.length !== 3) return null;
-
-      const [header, payload, signature] = parts;
-      const encoder = new TextEncoder();
-      const data = encoder.encode(`${header}.${payload}`);
-
-      const key = await crypto.subtle.importKey(
-        'raw', encoder.encode(JWT_SECRET),
-        { name: 'HMAC', hash: 'SHA-256' },
-        false, ['verify']
-      );
-
-      const sigUint8 = new Uint8Array(atob(signature.replace(/-/g, '+').replace(/_/g, '/')).split('').map(c => c.charCodeAt(0)));
-      const isValid = await crypto.subtle.verify('HMAC', key, sigUint8, data);
-
-      if (!isValid) return null;
-
-      const decodedPayload = JSON.parse(atob(payload.replace(/-/g, '+').replace(/_/g, '/')));
-      if (decodedPayload.exp && Date.now() / 1000 > decodedPayload.exp) return null;
-
-      return decodedPayload;
-    }
-
-    // Authentication Helper
-    const isAuthorized = async (req) => {
-      // 1. 프론트엔드에서 Authorization 헤더로 발송한 JWT 검증
-      const authHeader = req.headers.get('Authorization');
-      if (authHeader && authHeader.startsWith('Bearer ')) {
-        const token = authHeader.split(' ')[1];
-        const payload = await verifyJwt(token);
-        if (payload) return true;
-      }
-
-      // 2. Cloudflare Access가 활성화되어 전달된 헤더 검증 (직접 접근 시)
-      const jwt = req.headers.get('Cf-Access-Jwt-Assertion');
-
-      // 로컬 개발 환경(wrangler dev)에서는 편의상 허용
-      const host = req.headers.get('Host') || '';
-      if (!jwt && !authHeader && (host.includes('localhost') || host.includes('127.0.0.1') || host.includes(':8787'))) {
-        return true;
-      }
-
-      return !!jwt;
-    };
-
-    // 0-1. Authentication Check (GET /auth-check or /auth/me)
-    if ((path === '/auth-check' || path === '/auth/me') && method === 'GET') {
-      const authorized = await isAuthorized(request);
-      return Response.json({ authorized }, { headers: corsHeaders });
-    }
-
-    // 0-2. Login Session Generation & Redirect (GET /login)
-    if (path === '/login' && method === 'GET') {
-      const jwt = request.headers.get('Cf-Access-Jwt-Assertion');
-      const defaultRedirect = 'https://choidaruhan.github.io/';
-      const redirectUrl = url.searchParams.get('redirect') || defaultRedirect;
-
-      const host = request.headers.get('Host') || '';
-      const isLocal = host.includes('localhost') || host.includes('127.0.0.1') || host.includes(':8787');
-
-      if (jwt || isLocal) {
-        try {
-          // Cloudflare Access JWT를 파싱하여 사용자 정보 추출 (필요한 경우)
-          // 여기서는 단순히 성공 인증 시 자체 JWT를 발급함
-          const sessionToken = await signJwt({ sub: 'admin', iat: Math.floor(Date.now() / 1000) });
-
-          // 프론트엔드로 토큰을 URL 해시에 담아 리다이렉트
-          return Response.redirect(`${redirectUrl}#access_token=${sessionToken}`, 302);
-        } catch (e) {
-          return new Response("Session creation failed", { status: 500, headers: corsHeaders });
-        }
-      } else {
-        return new Response(`
-          <h1>Unauthorized</h1>
-          <p>This endpoint requires Cloudflare Access protection. Please configure your Cloudflare Access policy to protect <code>/login</code>.</p>
-        `, { status: 401, headers: { ...corsHeaders, 'Content-Type': 'text/html' } });
-      }
-    }
-
     try {
-      // 1. 글 목록 조회 (GET /posts) - 공개
-      if (path === '/posts' && method === 'GET') {
-        const { results } = await env.DB.prepare(
-          "SELECT id, title, created_at FROM posts ORDER BY created_at DESC"
-        ).all();
-        return Response.json(results, { headers: corsHeaders });
-      }
+      let response = await handleAuthRoutes(request, path, env, JWT_SECRET);
+      if (response) return response;
 
-      // 2. 개별 글 상세 조회 (GET /posts/:id) - 공개
-      if (path.startsWith('/posts/') && method === 'GET') {
-        const id = path.split('/')[2];
-        const post = await env.DB.prepare(
-          "SELECT * FROM posts WHERE id = ?"
-        ).bind(id).first();
-        if (!post) return new Response("Not Found", { status: 404, headers: corsHeaders });
-        return Response.json(post, { headers: corsHeaders });
-      }
+      response = await handlePostsRoutes(request, path, env, JWT_SECRET);
+      if (response) return response;
 
-      // 3. 글 작성/수정 (POST /posts) - 보호됨
-      if (path === '/posts' && method === 'POST') {
-        if (!(await isAuthorized(request))) {
-          return new Response("Unauthorized", { status: 401, headers: corsHeaders });
-        }
-
-        const body = await request.json();
-        const { id, title, content } = body;
-
-        // DB 저장
-        await env.DB.prepare(
-          "INSERT OR REPLACE INTO posts (id, title, content, created_at) VALUES (?, ?, ?, CURRENT_TIMESTAMP)"
-        ).bind(id, title, content).run();
-
-        return Response.json({ success: true }, { headers: corsHeaders });
-      }
-
-      // 4. 글 삭제 (DELETE /posts/:id) - 보호됨
-      if (path.startsWith('/posts/') && method === 'DELETE') {
-        if (!(await isAuthorized(request))) {
-          return new Response("Unauthorized", { status: 401, headers: corsHeaders });
-        }
-
-        const id = path.split('/')[2];
-        await env.DB.prepare("DELETE FROM posts WHERE id = ?").bind(id).run();
-
-        return Response.json({ success: true }, { headers: corsHeaders });
-      }
-
-      // 5. 단순 검색 (SQL LIKE)
-      if (path === '/search' && method === 'GET') {
-        const query = url.searchParams.get('q');
-        if (!query) return new Response("Missing query", { status: 400, headers: corsHeaders });
-
-        console.log(`Simple SQL search request received for query: "${query}"`);
-
-        try {
-          const sqlQuery = `%${query}%`;
-          // 검색어를 제목과 내용에서 부분 일치 검사. LIMIT를 20으로 늘림.
-          const { results: sqlPosts } = await env.DB.prepare(
-            "SELECT id, title, created_at FROM posts WHERE title LIKE ? OR content LIKE ? ORDER BY created_at DESC LIMIT 20"
-          ).bind(sqlQuery, sqlQuery).all();
-
-          console.log(`SQL search returned ${sqlPosts.length} results`);
-          return Response.json(sqlPosts, {
-            headers: {
-              ...corsHeaders,
-              'X-Search-Method': 'sql-only'
-            }
-          });
-        } catch (sError) {
-          console.error("SQL search failed:", sError);
-          return new Response("Search Failed", { status: 500, headers: corsHeaders });
-        }
-      }
+      response = await handleSearchRoutes(request, path, env);
+      if (response) return response;
 
       return new Response("Not Found", { status: 404, headers: corsHeaders });
     } catch (err) {
@@ -203,5 +29,4 @@ export default {
       return new Response("Internal Server Error", { status: 500, headers: corsHeaders });
     }
   }
-}
-
+};
