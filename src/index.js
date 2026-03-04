@@ -204,40 +204,65 @@ export default {
         return Response.json({ success: true }, { headers: corsHeaders });
       }
 
-      // 5. 벡터 검색 (GET /search?q=...)
+      // 5. 검색 (Vectorize + SQL Fallback)
       if (path === '/search' && method === 'GET') {
         const query = url.searchParams.get('q');
         if (!query) return new Response("Missing query", { status: 400, headers: corsHeaders });
 
-        // 검색어 벡터화
-        const queryEmbedding = await env.AI.run('@cf/baai/bge-small-en-v1.5', {
-          text: query
-        });
-        const vector = queryEmbedding.data[0];
+        let results = [];
+        let vectorIds = [];
 
-        // Vectorize 검색
-        const matches = await env.VECTOR_INDEX.query(vector, {
-          topK: 10,
-          returnValues: false,
-          returnMetadata: true
-        });
+        // 5-1. Vectorize 검색 시도
+        try {
+          if (env.VECTOR_INDEX && env.AI) {
+            const queryEmbedding = await env.AI.run('@cf/baai/bge-small-en-v1.5', {
+              text: query
+            });
+            const vector = queryEmbedding.data[0];
 
-        if (matches.matches.length === 0) {
-          return Response.json([], { headers: corsHeaders });
+            const matches = await env.VECTOR_INDEX.query(vector, {
+              topK: 10,
+              returnValues: false,
+              returnMetadata: true
+            });
+
+            if (matches && matches.matches && matches.matches.length > 0) {
+              vectorIds = matches.matches.map(m => m.id);
+              const placeholders = vectorIds.map(() => '?').join(',');
+
+              const { results: vectorPosts } = await env.DB.prepare(
+                `SELECT id, title, created_at FROM posts WHERE id IN (${placeholders})`
+              ).bind(...vectorIds).all();
+
+              results = vectorPosts.map(post => {
+                const match = matches.matches.find(m => m.id === post.id);
+                return { ...post, score: match ? match.score : 0, method: 'vector' };
+              });
+            }
+          }
+        } catch (vError) {
+          console.error("Vector search failed, falling back to SQL:", vError);
         }
 
-        // D1에서 실제 데이터와 매칭 (IN 절을 사용하여 성능 최적화)
-        const ids = matches.matches.map(m => m.id);
-        const placeholders = ids.map(() => '?').join(',');
-        const { results: posts } = await env.DB.prepare(
-          `SELECT id, title, created_at FROM posts WHERE id IN (${placeholders})`
-        ).bind(...ids).all();
+        // 5-2. SQL LIKE 검색 (Fallback 또는 보완)
+        try {
+          const sqlQuery = `%${query}%`;
+          const { results: sqlPosts } = await env.DB.prepare(
+            "SELECT id, title, created_at FROM posts WHERE title LIKE ? OR content LIKE ? ORDER BY created_at DESC LIMIT 10"
+          ).bind(sqlQuery, sqlQuery).all();
 
-        // Vectorize 스코어와 병합
-        const results = posts.map(post => {
-          const match = matches.matches.find(m => m.id === post.id);
-          return { ...post, score: match ? match.score : 0 };
-        }).sort((a, b) => b.score - a.score);
+          // 벡터 결과에 없는 항목들을 추가
+          sqlPosts.forEach(post => {
+            if (!vectorIds.includes(post.id)) {
+              results.push({ ...post, score: 0.5, method: 'sql' }); // SQL 결과는 중간 계수 부여
+            }
+          });
+        } catch (sError) {
+          console.error("SQL search failed:", sError);
+        }
+
+        // 결과 정렬 (점수 높은 순)
+        results.sort((a, b) => b.score - a.score);
 
         return Response.json(results, { headers: corsHeaders });
       }

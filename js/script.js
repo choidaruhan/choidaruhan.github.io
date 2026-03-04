@@ -104,12 +104,16 @@ async function loadSidebarPosts() {
     }
 }
 
-function renderSidebarPosts(posts) {
+function renderSidebarPosts(posts, isSearch = false) {
     const sidebarListDiv = document.getElementById('sidebar-post-list');
     if (!sidebarListDiv) return;
 
     if (!posts || posts.length === 0) {
-        sidebarListDiv.innerHTML = '<p style="font-size: 0.9rem; color: #7f8c8d;">게시글이 없습니다.</p>';
+        if (isSearch) {
+            sidebarListDiv.innerHTML = '<p style="font-size: 0.9rem; color: #7f8c8d; text-align: center; padding: 1rem;">검색 결과가 없습니다.</p>';
+        } else {
+            sidebarListDiv.innerHTML = '<p style="font-size: 0.9rem; color: #7f8c8d;">게시글이 없습니다.</p>';
+        }
         return;
     }
 
@@ -141,15 +145,19 @@ function setupSearch() {
             return;
         }
 
-        // 실시간 벡터 검색 (디바운싱 적용)
+        // 실시간 검색 (디바운싱 적용)
         debounceTimer = setTimeout(async () => {
             try {
                 const response = await fetch(`${window.API_URL}/search?q=${encodeURIComponent(query)}`);
                 if (!response.ok) throw new Error('Search failed');
                 const results = await response.json();
-                renderSidebarPosts(results);
+                renderSidebarPosts(results, true);
             } catch (err) {
-                console.error('Vector search error:', err);
+                console.error('Search error:', err);
+                const sidebarListDiv = document.getElementById('sidebar-post-list');
+                if (sidebarListDiv) {
+                    sidebarListDiv.innerHTML = '<p style="font-size: 0.9rem; color: red;">검색 중 오류가 발생했습니다.</p>';
+                }
             }
         }, 300);
     };
