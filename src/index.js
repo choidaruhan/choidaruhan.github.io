@@ -141,58 +141,6 @@ export default {
         return Response.json(post, { headers: corsHeaders });
       }
 
-      // 2-1. 전체 재색인 (POST /reindex) - 보호됨
-      if (path === '/reindex' && method === 'POST') {
-        if (!(await isAuthorized(request))) {
-          return new Response("Unauthorized", { status: 401, headers: corsHeaders });
-        }
-
-        console.log("Starting full re-indexing...");
-        try {
-          // 모든 포스트 가져오기
-          const { results: allPosts } = await env.DB.prepare(
-            "SELECT id, title, content FROM posts"
-          ).all();
-
-          console.log(`Found ${allPosts.length} posts to re-index`);
-
-          let successCount = 0;
-          let failCount = 0;
-
-          // 각 포스트에 대해 임베딩 생성 및 업서트
-          for (const post of allPosts) {
-            try {
-              const embeddingResponse = await env.AI.run('@cf/baai/bge-small-en-v1.5', {
-                text: [post.title, post.content].join(' ')
-              });
-              const values = embeddingResponse.data[0];
-
-              await env.VECTOR_INDEX.upsert([
-                {
-                  id: post.id,
-                  values: values,
-                  metadata: { title: post.title }
-                }
-              ]);
-              successCount++;
-            } catch (e) {
-              console.error(`Failed to index post ${post.id}:`, e);
-              failCount++;
-            }
-          }
-
-          return Response.json({
-            success: true,
-            total: allPosts.length,
-            indexed: successCount,
-            failed: failCount
-          }, { headers: corsHeaders });
-        } catch (error) {
-          console.error("Re-indexing failed:", error);
-          return Response.json({ success: false, error: error.message }, { status: 500, headers: corsHeaders });
-        }
-      }
-
       // 3. 글 작성/수정 (POST /posts) - 보호됨
       if (path === '/posts' && method === 'POST') {
         if (!(await isAuthorized(request))) {
@@ -207,34 +155,6 @@ export default {
           "INSERT OR REPLACE INTO posts (id, title, content, created_at) VALUES (?, ?, ?, CURRENT_TIMESTAMP)"
         ).bind(id, title, content).run();
 
-        // 벡터 생성 (Cloudflare AI)
-        let values = [];
-        try {
-          const embeddingResponse = await env.AI.run('@cf/baai/bge-small-en-v1.5', {
-            text: [title, content].join(' ')
-          });
-          values = embeddingResponse.data[0];
-          console.log(`Vector embedding generated for post ${id}`);
-        } catch (aiError) {
-          console.error(`AI embedding generation failed for post ${id}:`, aiError);
-        }
-
-        // Vectorize 인덱스 업데이트
-        if (values && values.length > 0) {
-          try {
-            await env.VECTOR_INDEX.upsert([
-              {
-                id: id,
-                values: values,
-                metadata: { title }
-              }
-            ]);
-            console.log(`Vectorize upsert successful for post ${id}`);
-          } catch (vError) {
-            console.error(`Vectorize upsert failed for post ${id}:`, vError);
-          }
-        }
-
         return Response.json({ success: true }, { headers: corsHeaders });
       }
 
@@ -247,98 +167,34 @@ export default {
         const id = path.split('/')[2];
         await env.DB.prepare("DELETE FROM posts WHERE id = ?").bind(id).run();
 
-        try {
-          await env.VECTOR_INDEX.deleteByIds([id]);
-        } catch (vError) {
-          console.error("Vectorize delete failed (Expected in local dev):", vError);
-          // 로컬 개발 환경에서는 Vectorize가 지원되지 않으므로 에러를 무시하고 진행합니다.
-        }
-
         return Response.json({ success: true }, { headers: corsHeaders });
       }
 
-      // 5. 검색 (Vectorize + SQL Fallback)
+      // 5. 단순 검색 (SQL LIKE)
       if (path === '/search' && method === 'GET') {
         const query = url.searchParams.get('q');
         if (!query) return new Response("Missing query", { status: 400, headers: corsHeaders });
 
-        console.log(`Search request received for query: "${query}"`);
+        console.log(`Simple SQL search request received for query: "${query}"`);
 
-        let results = [];
-        let vectorIds = [];
-
-        // 5-1. Vectorize 검색 시도
-        try {
-          if (env.VECTOR_INDEX && env.AI) {
-            const queryEmbedding = await env.AI.run('@cf/baai/bge-small-en-v1.5', {
-              text: query
-            });
-            const vector = queryEmbedding.data[0];
-
-            const matches = await env.VECTOR_INDEX.query(vector, {
-              topK: 10,
-              returnValues: false,
-              returnMetadata: true
-            });
-
-            if (matches && matches.matches && matches.matches.length > 0) {
-              vectorIds = matches.matches.map(m => m.id);
-              const placeholders = vectorIds.map(() => '?').join(',');
-
-              const { results: vectorPosts } = await env.DB.prepare(
-                `SELECT id, title, created_at FROM posts WHERE id IN (${placeholders})`
-              ).bind(...vectorIds).all();
-
-              results = vectorPosts.map(post => {
-                const match = matches.matches.find(m => m.id === post.id);
-                return { ...post, score: match ? match.score : 0, method: 'vector' };
-              });
-              console.log(`Vector search returned ${results.length} results`);
-            } else {
-              console.log("Vectorize returned no matches");
-            }
-          } else {
-            console.warn("Vectorize or AI binding missing");
-          }
-        } catch (vError) {
-          console.error("Vector search failed:", vError);
-        }
-
-        // SQL LIKE 검색 (Fallback 또는 보완)
         try {
           const sqlQuery = `%${query}%`;
+          // 검색어를 제목과 내용에서 부분 일치 검사. LIMIT를 20으로 늘림.
           const { results: sqlPosts } = await env.DB.prepare(
-            "SELECT id, title, created_at FROM posts WHERE title LIKE ? OR content LIKE ? ORDER BY created_at DESC LIMIT 10"
+            "SELECT id, title, created_at FROM posts WHERE title LIKE ? OR content LIKE ? ORDER BY created_at DESC LIMIT 20"
           ).bind(sqlQuery, sqlQuery).all();
 
-          console.log(`SQL LIKE search returned ${sqlPosts.length} results`);
-
-          // 기존 결과(결과 리스트)에 포함되지 않은 항목들을 추가
-          sqlPosts.forEach(post => {
-            if (!results.some(r => r.id === post.id)) {
-              results.push({ ...post, score: 0.6, method: 'sql' }); // SQL 결과 점수 약간 상향
-            } else {
-              // 이미 벡터 결과에 있는 경우라도 제목이 완전히 포함되어 있다면 점수 보정 (Optional)
-              const existingIndex = results.findIndex(r => r.id === post.id);
-              if (existingIndex !== -1 && results[existingIndex].score < 0.6) {
-                results[existingIndex].score = 0.7; // SQL 매칭 시 최소 점수 보장
-                results[existingIndex].method = 'hybrid-sql-boost';
-              }
+          console.log(`SQL search returned ${sqlPosts.length} results`);
+          return Response.json(sqlPosts, {
+            headers: {
+              ...corsHeaders,
+              'X-Search-Method': 'sql-only'
             }
           });
         } catch (sError) {
           console.error("SQL search failed:", sError);
+          return new Response("Search Failed", { status: 500, headers: corsHeaders });
         }
-
-        // 결과 정렬 (점수 높은 순)
-        results.sort((a, b) => b.score - a.score);
-
-        return Response.json(results, {
-          headers: {
-            ...corsHeaders,
-            'X-Search-Method': vectorIds.length > 0 ? 'hybrid' : 'sql'
-          }
-        });
       }
 
       return new Response("Not Found", { status: 404, headers: corsHeaders });
@@ -348,3 +204,4 @@ export default {
     }
   }
 }
+
