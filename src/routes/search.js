@@ -1,33 +1,90 @@
-import { corsHeaders } from '../utils/cors.js';
+import { corsHeaders, getCorsHeaders } from '../utils/cors.js';
+import { AppError, Errors } from '../utils/errors.js';
 
-export async function handleSearchRoutes(request, path, env) {
+/**
+ * 검색어 입력값 검증 및 sanitize
+ * SQL LIKE 메타문자 escape 및 길이 제한
+ */
+function sanitizeSearchQuery(query) {
+  if (!query || typeof query !== 'string') {
+    throw Errors.badRequest('Search query is required');
+  }
+  
+  const trimmed = query.trim();
+  
+  if (trimmed.length === 0) {
+    throw Errors.badRequest('Search query cannot be empty');
+  }
+  
+  if (trimmed.length > 100) {
+    throw Errors.badRequest('Search query too long (max 100 characters)');
+  }
+  
+  // SQL LIKE 메타문자 escape (% 와 _)
+  // SQLite에서 %와 _는 와일드카드이므로 \로 escape
+  const sanitized = trimmed
+    .replace(/\\/g, '\\\\')  // 먼저 백슬래시 escape
+    .replace(/%/g, '\\%')     // % escape
+    .replace(/_/g, '\\_');    // _ escape
+  
+  return sanitized;
+}
+
+/**
+ * 검색 결과 후처리
+ * 민감한 정보 필터링
+ */
+function sanitizeSearchResults(results) {
+  if (!Array.isArray(results)) return [];
+  
+  return results.map(post => ({
+    id: post.id,
+    title: post.title,
+    created_at: post.created_at
+    // content는 검색 결과에서 제외 (민감 정보)
+  }));
+}
+
+export async function handleSearchRoutes(request, path, env, corsHeaders) {
   const method = request.method;
   const url = new URL(request.url);
+  const cors = corsHeaders || getCorsHeaders(request);
 
-  // 5. 단순 검색 (SQL LIKE)
+  // 단순 검색 (SQL LIKE)
   if (path === '/search' && method === 'GET') {
-    const query = url.searchParams.get('q');
-    if (!query) return new Response("Missing query", { status: 400, headers: corsHeaders });
-
-    console.log(`Simple SQL search request received for query: "${query}"`);
-
+    const rawQuery = url.searchParams.get('q');
+    
     try {
-      const sqlQuery = `%${query}%`;
-      // 검색어를 제목과 내용에서 부분 일치 검사. LIMIT를 20으로 늘림.
-      const { results: sqlPosts } = await env.DB.prepare(
-        "SELECT id, title, created_at FROM posts WHERE title LIKE ? OR content LIKE ? ORDER BY created_at DESC LIMIT 20"
-      ).bind(sqlQuery, sqlQuery).all();
+      const query = sanitizeSearchQuery(rawQuery);
+      const searchPattern = `%${query}%`;
+      
+      console.log(`Search request: "${rawQuery}" -> sanitized: "${query}"`);
 
-      console.log(`SQL search returned ${sqlPosts.length} results`);
-      return Response.json(sqlPosts, {
+      const { results: sqlPosts } = await env.DB.prepare(
+        `SELECT id, title, created_at 
+         FROM posts 
+         WHERE title LIKE ? ESCAPE '\\' 
+            OR content LIKE ? ESCAPE '\\' 
+         ORDER BY created_at DESC 
+         LIMIT 20`
+      ).bind(searchPattern, searchPattern).all();
+
+      const sanitizedResults = sanitizeSearchResults(sqlPosts);
+      
+      console.log(`Search returned ${sanitizedResults.length} results`);
+      
+      return Response.json(sanitizedResults, {
         headers: {
-          ...corsHeaders,
-          'X-Search-Method': 'sql-only'
+          ...cors,
+          'X-Search-Method': 'sql-like',
+          'X-Total-Results': sanitizedResults.length.toString()
         }
       });
-    } catch (sError) {
-      console.error("SQL search failed:", sError);
-      return new Response("Search Failed", { status: 500, headers: corsHeaders });
+      
+    } catch (error) {
+      if (error instanceof AppError) throw error;
+      console.error('Search error:', error);
+      throw Errors.internal('Search failed');
     }
   }
 
