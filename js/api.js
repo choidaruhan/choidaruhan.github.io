@@ -3,8 +3,10 @@
  */
 class ApiError extends Error {
   constructor(response, message) {
-    super(message || `API Error: ${response.status}`);
-    this.status = response.status;
+    // response가 없는 경우(네트워크 오류 등)를 처리
+    const status = response?.status || 'NETWORK_ERROR';
+    super(message || `API Error: ${status}`);
+    this.status = status;
     this.response = response;
   }
 }
@@ -41,7 +43,7 @@ class ApiClient {
   async request(endpoint, options = {}) {
     const url = `${this.baseURL}${endpoint}`;
     const headers = this.buildHeaders(options.headers);
-    
+
     const config = {
       ...options,
       headers
@@ -52,18 +54,25 @@ class ApiClient {
       delete config.body;
     }
 
-    const response = await fetch(url, config);
-    
+    let response;
+    try {
+      response = await fetch(url, config);
+    } catch (fetchError) {
+      // 네트워크 오류, CORS 에러 등 fetch 자체가 실패한 경우
+      console.warn(`Fetch failed for ${url}:`, fetchError.message);
+      throw new ApiError(null, `Network error: ${fetchError.message}`);
+    }
+
     if (!response.ok) {
       throw new ApiError(response);
     }
-    
+
     // 204 No Content 등 본문이 없는 응답 처리
     const contentType = response.headers.get('content-type');
     if (contentType && contentType.includes('application/json')) {
       return response.json();
     }
-    
+
     return response.text();
   }
 

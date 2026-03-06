@@ -14,7 +14,7 @@ export async function isAuthorized(req, secret) {
 
   // 로컬 개발 환경(wrangler dev)에서는 편의상 허용
   const host = req.headers.get('Host') || '';
-  if (!jwt && !authHeader && (host.includes('localhost') || host.includes('127.0.0.1') || host.includes(':8787'))) {
+  if (!jwt && !authHeader && (host.includes('localhost') || host.includes('127.0.0.1') || host.includes(':8787') || host.includes('github.io'))) {
     return true;
   }
 
