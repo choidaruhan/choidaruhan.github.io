@@ -20,6 +20,12 @@ export async function signJwt(payload, secret) {
   return `${base64Header}.${base64Payload}.${base64Signature}`;
 }
 
+function decodeBase64Url(str) {
+  let base64 = str.replace(/-/g, '+').replace(/_/g, '/');
+  base64 += '='.repeat((4 - base64.length % 4) % 4);
+  return atob(base64);
+}
+
 export async function verifyJwt(token, secret) {
   if (!token) return null;
   const parts = token.split('.');
@@ -35,13 +41,19 @@ export async function verifyJwt(token, secret) {
     false, ['verify']
   );
 
-  const sigUint8 = new Uint8Array(atob(signature.replace(/-/g, '+').replace(/_/g, '/')).split('').map(c => c.charCodeAt(0)));
-  const isValid = await crypto.subtle.verify('HMAC', key, sigUint8, data);
+  try {
+    const decodedSig = decodeBase64Url(signature);
+    const sigUint8 = new Uint8Array(decodedSig.split('').map(c => c.charCodeAt(0)));
+    const isValid = await crypto.subtle.verify('HMAC', key, sigUint8, data);
 
-  if (!isValid) return null;
+    if (!isValid) return null;
 
-  const decodedPayload = JSON.parse(atob(payload.replace(/-/g, '+').replace(/_/g, '/')));
-  if (decodedPayload.exp && Date.now() / 1000 > decodedPayload.exp) return null;
+    const decodedPayload = JSON.parse(decodeBase64Url(payload));
+    if (decodedPayload.exp && Date.now() / 1000 > decodedPayload.exp) return null;
 
-  return decodedPayload;
+    return decodedPayload;
+  } catch (e) {
+    console.error('JWT Verification Error:', e);
+    return null;
+  }
 }
