@@ -1,4 +1,4 @@
-import { fetchPost, createPost } from './api.js';
+import { fetchPost, createPost, fetchWithAuth } from './api.js';
 
 // 전역 변수 및 DOM 요소
 const writeForm = document.getElementById('write-form');
@@ -19,8 +19,37 @@ function getEditPostId() {
 
 const editPostId = getEditPostId();
 
+// 인증 확인 함수
+async function verifyAuth() {
+  try {
+    const response = await fetchWithAuth(`${window.API_URL}/auth/me`);
+    if (!response.ok) {
+      throw new Error(`인증 실패: ${response.status}`);
+    }
+    const data = await response.json();
+    if (!data.authorized) {
+      throw new Error('권한이 없습니다');
+    }
+    // 인증 성공
+    return true;
+  } catch (error) {
+    console.warn('인증 확인 실패:', error.message);
+    // 인증되지 않은 사용자 처리
+    alert('글쓰기 페이지에 접근하려면 로그인이 필요합니다.');
+    // Cloudflare Access 로그인 페이지로 리디렉션
+    window.location.href = `${window.API_URL}/login?redirect=${encodeURIComponent(window.location.origin + window.location.pathname)}`;
+    return false;
+  }
+}
+
 // 초기화 함수
 async function init() {
+  // 인증 확인
+  const isAuthenticated = await verifyAuth();
+  if (!isAuthenticated) {
+    return; // 인증 실패 시 여기서 종료
+  }
+
   // 수정 모드일 경우 기존 데이터 불러오기
   if (editPostId) {
     console.log('수정 모드 진입: Post ID =', editPostId);

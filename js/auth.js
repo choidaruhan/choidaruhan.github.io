@@ -50,7 +50,7 @@ function showLoggedOutView() {
   if (loggedOutView) loggedOutView.classList.remove('hidden');
   if (adminControls) adminControls.classList.add('hidden');
 
-  // 로그인 링크 업데이트
+  // 로그인 링크 업데이트: 로그인 후 현재 페이지로 돌아옴
   const loginLink = document.getElementById('login-link');
   if (loginLink) {
     loginLink.href = `${window.API_URL}/login?redirect=${encodeURIComponent(window.location.origin + window.location.pathname)}`;
