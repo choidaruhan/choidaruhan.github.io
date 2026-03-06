@@ -29,6 +29,7 @@ export async function handleAuthRoutes(request, path, env, secret, corsHeaders) 
     // 리다이렉트 URL 검증
     const allowedRedirects = [
       'https://choidaruhan.github.io',
+      'https://choidaruhan.github.io/',
       'http://localhost:3000',
       'http://localhost:8787',
       'http://127.0.0.1:3000',
