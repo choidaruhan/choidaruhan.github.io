@@ -30,7 +30,9 @@ export async function handleAuthRoutes(request, path, env, secret, corsHeaders) 
     const allowedRedirects = [
       'https://choidaruhan.github.io',
       'http://localhost:3000',
-      'http://localhost:8787'
+      'http://localhost:8787',
+      'http://127.0.0.1:3000',
+      'http://127.0.0.1:8787'
     ];
     
     const requestedRedirect = url.searchParams.get('redirect');

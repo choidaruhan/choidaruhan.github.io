@@ -1,5 +1,24 @@
 import { fetchPost, createPost, fetchWithAuth } from './api.js';
 
+// URL 해시에서 Cloudflare Access 토큰 추출 및 저장
+function extractAndStoreTokenFromHash() {
+  const hash = window.location.hash.slice(1);
+  if (hash.startsWith('access_token=')) {
+    const token = hash.split('=')[1];
+    localStorage.setItem('cf_access_token', token);
+    // 토큰을 URL에서 숨기기 위해 해시 제거
+    history.replaceState("", document.title, window.location.pathname + window.location.search);
+    console.log('Access token extracted and stored from hash');
+    return true;
+  }
+  return false;
+}
+
+// 페이지 로드 시 토큰 추출 시도
+if (window.location.hash.includes('access_token=')) {
+  extractAndStoreTokenFromHash();
+}
+
 // 전역 변수 및 DOM 요소
 const writeForm = document.getElementById('write-form');
 const submitBtn = document.getElementById('submit-btn');
@@ -22,22 +41,36 @@ const editPostId = getEditPostId();
 // 인증 확인 함수
 async function verifyAuth() {
   try {
-    const response = await fetchWithAuth(`${window.API_URL}/auth/me`);
-    if (!response.ok) {
-      throw new Error(`인증 실패: ${response.status}`);
+    // fetchWithAuth는 JSON 데이터를 반환 (Response 객체 아님)
+    const data = await fetchWithAuth(`${window.API_URL}/auth/me`);
+
+    // 데이터가 없거나 authorized가 false인 경우
+    if (!data || !data.authorized) {
+      console.warn('인증 응답:', data);
+      throw new Error(`인증 실패: ${data ? '권한 없음' : '응답 없음'}`);
     }
-    const data = await response.json();
-    if (!data.authorized) {
-      throw new Error('권한이 없습니다');
-    }
+
     // 인증 성공
+    console.log('인증 성공:', data);
     return true;
   } catch (error) {
-    console.warn('인증 확인 실패:', error.message);
+    // 더 자세한 오류 정보 로깅
+    console.warn('인증 확인 실패:', {
+      message: error.message,
+      status: error.status,
+      name: error.name,
+      stack: error.stack
+    });
+
     // 인증되지 않은 사용자 처리
-    alert('글쓰기 페이지에 접근하려면 로그인이 필요합니다.');
+    alert('글쓰기 페이지에 접근하려면 로그인이 필요합니다.\n\n로그인 페이지로 이동합니다.');
+
     // Cloudflare Access 로그인 페이지로 리디렉션
-    window.location.href = `${window.API_URL}/login?redirect=${encodeURIComponent(window.location.origin + window.location.pathname)}`;
+    // 현재 URL을 redirect 파라미터로 전달 (로그인 성공 후 돌아옴)
+    const redirectUrl = `${window.API_URL}/login?redirect=${encodeURIComponent(window.location.origin + window.location.pathname)}`;
+    console.log('리디렉션 URL:', redirectUrl);
+    window.location.href = redirectUrl;
+
     return false;
   }
 }
