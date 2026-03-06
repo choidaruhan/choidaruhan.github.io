@@ -11,7 +11,7 @@ export async function handleAuthRoutes(request, path, env, secret, corsHeaders) 
   if ((path === '/auth-check' || path === '/auth/me') && method === 'GET') {
     try {
       const authorized = await isAuthorized(request, secret);
-      return Response.json({ 
+      return Response.json({
         authorized,
         timestamp: new Date().toISOString()
       }, { headers: cors });
@@ -25,7 +25,7 @@ export async function handleAuthRoutes(request, path, env, secret, corsHeaders) 
   if (path === '/login' && method === 'GET') {
     const url = new URL(request.url);
     const jwt = request.headers.get('Cf-Access-Jwt-Assertion');
-    
+
     // 리다이렉트 URL 검증
     const allowedRedirects = [
       'https://choidaruhan.github.io',
@@ -35,35 +35,36 @@ export async function handleAuthRoutes(request, path, env, secret, corsHeaders) 
       'http://127.0.0.1:3000',
       'http://127.0.0.1:8787'
     ];
-    
+
     const requestedRedirect = url.searchParams.get('redirect');
     const defaultRedirect = 'https://choidaruhan.github.io/';
-    
+
     // 허용된 리다이렉트 URL인지 검증
-    const redirectUrl = allowedRedirects.some(allowed => 
+    const redirectUrl = allowedRedirects.some(allowed =>
       requestedRedirect?.startsWith(allowed)
     ) ? requestedRedirect : defaultRedirect;
 
     const host = request.headers.get('Host') || '';
-    const isLocal = host.includes('localhost') || 
-                    host.includes('127.0.0.1') || 
-                    host.includes(':8787');
+    const isLocal = host.includes('localhost') ||
+      host.includes('127.0.0.1') ||
+      host.includes(':8787');
 
     if (jwt || isLocal) {
       try {
         const sessionToken = await signJwt(
-          { 
-            sub: 'admin', 
+          {
+            sub: 'admin',
             iat: Math.floor(Date.now() / 1000),
             type: 'session'
-          }, 
+          },
           secret
         );
-        
+
         // 안전한 리다이렉트
         const safeRedirect = new URL(redirectUrl);
-        safeRedirect.hash = `access_token=${sessionToken}`;
-        
+        const existingHash = safeRedirect.hash.replace('#', '');
+        safeRedirect.hash = `access_token=${sessionToken}${existingHash ? '&restore=' + existingHash : ''}`;
+
         return Response.redirect(safeRedirect.toString(), 302);
       } catch (e) {
         console.error('Session creation error:', e);
@@ -83,12 +84,12 @@ export async function handleAuthRoutes(request, path, env, secret, corsHeaders) 
           <p><small>${new Date().toISOString()}</small></p>
         </body>
         </html>
-      `, { 
-        status: 401, 
-        headers: { 
-          ...cors, 
+      `, {
+        status: 401,
+        headers: {
+          ...cors,
           'Content-Type': 'text/html; charset=utf-8'
-        } 
+        }
       });
     }
   }

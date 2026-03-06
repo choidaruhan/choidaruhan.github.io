@@ -191,13 +191,24 @@ window.addEventListener('hashchange', () => {
     const hash = window.location.hash.slice(1);
 
     // Cloudflare 인증 후 돌아온 경우 토큰 저장
-    if (hash.startsWith('access_token=')) {
-        const token = hash.split('=')[1];
-        localStorage.setItem('cf_access_token', token);
-        // 토큰을 URL에서 숨기기 위해 해시 제거
-        history.replaceState("", document.title, window.location.pathname + window.location.search);
+    if (hash.includes('access_token=')) {
+        const params = new URLSearchParams(hash);
+        const token = params.get('access_token');
+        const restore = params.get('restore');
+
+        if (token) {
+            localStorage.setItem('cf_access_token', token);
+        }
+
+        if (restore) {
+            // 복원할 위치가 있으면 해당 위치로
+            window.location.hash = restore;
+        } else {
+            // 토큰을 URL에서 숨기기 위해 해시 제거
+            history.replaceState("", document.title, window.location.pathname + window.location.search);
+            loadHome();
+        }
         checkAuth(); // 인증 상태 갱신
-        loadHome();
         return;
     }
 
@@ -213,10 +224,20 @@ window.addEventListener('load', async () => {
     const hash = window.location.hash.slice(1);
 
     // Cloudflare 인증 후 돌아온 경우 토큰 저장
-    if (hash.startsWith('access_token=')) {
-        const token = hash.split('=')[1];
-        localStorage.setItem('cf_access_token', token);
-        history.replaceState("", document.title, window.location.pathname + window.location.search);
+    if (hash.includes('access_token=')) {
+        const params = new URLSearchParams(hash);
+        const token = params.get('access_token');
+        const restore = params.get('restore');
+
+        if (token) {
+            localStorage.setItem('cf_access_token', token);
+            // 토큰을 URL에서 숨기기 위해 해시 변경
+            if (restore) {
+                history.replaceState("", document.title, window.location.pathname + window.location.search + '#' + restore);
+            } else {
+                history.replaceState("", document.title, window.location.pathname + window.location.search);
+            }
+        }
     }
 
     await checkAuth();
@@ -224,7 +245,7 @@ window.addEventListener('load', async () => {
 
     // 토큰 해시 처리를 이미 했다면 홈으로, 아니면 기존 해시(글 ID)로 이동
     const currentHash = window.location.hash.slice(1);
-    if (currentHash && !currentHash.startsWith('access_token=')) {
+    if (currentHash && !currentHash.includes('access_token=')) {
         loadPost(currentHash);
     } else {
         loadHome();
