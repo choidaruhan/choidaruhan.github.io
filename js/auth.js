@@ -53,7 +53,11 @@ function showLoggedOutView() {
   // 로그인 링크 업데이트: 로그인 후 현재 페이지로 돌아옴
   const loginLink = document.getElementById('login-link');
   if (loginLink) {
-    loginLink.href = `${window.API_URL}/login?redirect=${encodeURIComponent(window.location.origin + window.location.pathname)}`;
+    const redirectUrl = `${window.API_URL}/login?redirect=${encodeURIComponent(window.location.origin + window.location.pathname)}`;
+    loginLink.href = redirectUrl;
+    console.log('로그인 링크 업데이트:', redirectUrl);
+  } else {
+    console.warn('login-link 요소를 찾을 수 없음');
   }
 }
 
