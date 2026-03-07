@@ -1,12 +1,22 @@
-import { fetchPosts, fetchPost, deletePostApi, searchPosts } from './api.js';
-import { checkAuth } from './auth.js';
+import { fetchPosts, fetchPost, deletePostApi, searchPosts, createPost } from './api.js';
+import { checkAuth, verifyAuthentication } from './auth.js';
 
 let allPosts = []; // 모든 글 목록을 저장할 변수
+let currentEditId = null; // 현재 수정 중인 글 ID
 
 const loadingDiv = document.getElementById('loading');
 const homeLink = document.getElementById('home-link');
 const sidebarToggleBtn = document.getElementById('sidebar-toggle');
 const sidebar = document.getElementById('sidebar');
+
+// DOM Elements for Write View
+const writeView = document.getElementById('write-view');
+const writeForm = document.getElementById('write-form');
+const writeTitle = document.getElementById('write-title');
+const postTitleInput = document.getElementById('post-title');
+const postContentInput = document.getElementById('post-content');
+const submitBtn = document.getElementById('submit-btn');
+const cancelWriteBtn = document.getElementById('cancel-write-btn');
 
 if (sidebarToggleBtn && sidebar) {
     sidebarToggleBtn.addEventListener('click', () => {
@@ -15,14 +25,13 @@ if (sidebarToggleBtn && sidebar) {
 
     // 모바일 등에서 메뉴 바깥 영역 클릭 시 사이드바 닫기
     document.addEventListener('click', (e) => {
-        if (sidebar.classList.contains('show') && !sidebar.contains(e.target) && !sidebarToggleBtn.contains(e.target)) {
+        if (sidebar && sidebar.classList.contains('show') && !sidebar.contains(e.target) && !sidebarToggleBtn.contains(e.target)) {
             sidebar.classList.remove('show');
         }
     });
 
     // 사이드바 내의 링크 클릭 시 사이드바 닫기
     sidebar.addEventListener('click', (e) => {
-        // 클릭한 요소가 a 태그이거나 a 태그의 자식인 경우
         if (e.target.closest('a')) {
             sidebar.classList.remove('show');
         }
@@ -84,12 +93,9 @@ function setupSearch() {
             return;
         }
 
-        // 실시간 검색 (디바운싱 적용)
         debounceTimer = setTimeout(async () => {
-            console.log(`Searching for: ${query}`);
             try {
                 const results = await searchPosts(query);
-                console.log('Search results:', results);
                 renderSidebarPosts(results, true);
             } catch (err) {
                 console.error('Search error:', err);
@@ -108,23 +114,25 @@ function setupSearch() {
 async function loadHome() {
     const homeView = document.getElementById('home-view');
     const postView = document.getElementById('post-view');
+    const writeView = document.getElementById('write-view');
     const errorView = document.getElementById('error-view');
-    if (homeView && postView && errorView) {
+    if (homeView && postView && writeView && errorView) {
         homeView.classList.remove('hidden');
         postView.classList.add('hidden');
+        writeView.classList.add('hidden');
         errorView.classList.add('hidden');
     }
 }
 
-// 3. 개별 포스트 로드 (본문 읽기)
 async function loadPost(postId) {
     const homeView = document.getElementById('home-view');
     const postView = document.getElementById('post-view');
+    const writeView = document.getElementById('write-view');
     const errorView = document.getElementById('error-view');
 
-    // 로딩 전 모든 뷰 숨김
     if (homeView) homeView.classList.add('hidden');
     if (postView) postView.classList.add('hidden');
+    if (writeView) writeView.classList.add('hidden');
     if (errorView) errorView.classList.add('hidden');
 
     showLoading();
@@ -142,7 +150,7 @@ async function loadPost(postId) {
             titleDisplay.textContent = post.title;
             dateDisplay.textContent = dateStr;
             contentDisplay.innerHTML = marked.parse(post.content);
-            editLink.href = `write.html#${post.id}`;
+            editLink.href = `#edit/${post.id}`;
             deleteBtn.onclick = () => deletePost(post.id);
 
             if (postView) postView.classList.remove('hidden');
@@ -156,6 +164,82 @@ async function loadPost(postId) {
     }
 }
 
+async function loadEditor(postId = null) {
+    const { authorized } = await verifyAuthentication();
+    if (!authorized) {
+        alert('이 페이지에 접근하려면 로그인이 필요합니다.');
+        const currentHash = window.location.hash;
+        window.location.href = `${window.API_URL}/login?redirect=${encodeURIComponent(window.location.origin + window.location.pathname + currentHash)}`;
+        return;
+    }
+
+    const homeView = document.getElementById('home-view');
+    const postView = document.getElementById('post-view');
+    const writeView = document.getElementById('write-view');
+    const errorView = document.getElementById('error-view');
+
+    if (homeView) homeView.classList.add('hidden');
+    if (postView) postView.classList.add('hidden');
+    if (errorView) errorView.classList.add('hidden');
+    if (writeView) writeView.classList.remove('hidden');
+
+    currentEditId = postId;
+    if (postId) {
+        writeTitle.textContent = '글 수정하기';
+        submitBtn.textContent = '수정 완료';
+        showLoading();
+        try {
+            const post = await fetchPost(postId);
+            postTitleInput.value = post.title;
+            postContentInput.value = post.content;
+        } catch (error) {
+            alert('기존 글을 불러오는 데 실패했습니다.');
+            window.location.hash = '';
+        } finally {
+            hideLoading();
+        }
+    } else {
+        writeTitle.textContent = '새 글 작성하기';
+        submitBtn.textContent = '작성 완료';
+        postTitleInput.value = '';
+        postContentInput.value = '';
+    }
+    window.scrollTo(0, 0);
+}
+
+if (writeForm) {
+    writeForm.onsubmit = async (e) => {
+        e.preventDefault();
+        const title = postTitleInput.value;
+        const content = postContentInput.value;
+        const id = currentEditId || crypto.randomUUID();
+
+        submitBtn.disabled = true;
+        const originalText = submitBtn.textContent;
+        submitBtn.textContent = '저장 중...';
+
+        try {
+            await createPost(id, title, content);
+            alert(currentEditId ? '수정되었습니다.' : '등록되었습니다.');
+            await loadSidebarPosts();
+            window.location.hash = `#${id}`;
+        } catch (error) {
+            alert('저장에 실패했습니다.');
+            console.error('Save error:', error);
+            submitBtn.disabled = false;
+            submitBtn.textContent = originalText;
+        }
+    };
+}
+
+if (cancelWriteBtn) {
+    cancelWriteBtn.onclick = () => {
+        if (confirm('작성을 취소하시겠습니까?')) {
+            window.history.back();
+        }
+    };
+}
+
 window.deletePost = async function (postId) {
     if (!confirm('정말로 이 글을 삭제하시겠습니까?')) return;
 
@@ -163,7 +247,7 @@ window.deletePost = async function (postId) {
         await deletePostApi(postId);
         alert('삭제되었습니다.');
         await loadSidebarPosts();
-        window.location.hash = ''; // 홈으로 이동
+        window.location.hash = '';
     } catch (error) {
         alert('삭제 실패: API 연결을 확인하세요.');
         console.error('Error deleting post:', error);
@@ -171,26 +255,23 @@ window.deletePost = async function (postId) {
 }
 
 function showLoading() {
-    loadingDiv.classList.remove('hidden');
+    if (loadingDiv) loadingDiv.classList.remove('hidden');
 }
 
 function hideLoading() {
-    loadingDiv.classList.add('hidden');
+    if (loadingDiv) loadingDiv.classList.add('hidden');
 }
 
-// 홈 링크 클릭 처리
 homeLink.addEventListener('click', (e) => {
     e.preventDefault();
     history.pushState("", document.title, window.location.pathname + window.location.search);
-    window.location.hash = ''; // 해시 초기화
+    window.location.hash = '';
     loadHome();
 });
 
-// URL hash 이벤트(뒤로가기, 글 클릭 등) 처리
 window.addEventListener('hashchange', () => {
     const hash = window.location.hash.slice(1);
 
-    // Cloudflare 인증 후 돌아온 경우 토큰 저장
     if (hash.includes('access_token=')) {
         const params = new URLSearchParams(hash);
         const token = params.get('access_token');
@@ -201,29 +282,30 @@ window.addEventListener('hashchange', () => {
         }
 
         if (restore) {
-            // 복원할 위치가 있으면 해당 위치로
             window.location.hash = restore;
         } else {
-            // 토큰을 URL에서 숨기기 위해 해시 제거
             history.replaceState("", document.title, window.location.pathname + window.location.search);
             loadHome();
         }
-        checkAuth(); // 인증 상태 갱신
+        checkAuth();
         return;
     }
 
-    if (hash) {
+    if (hash === 'write') {
+        loadEditor();
+    } else if (hash.startsWith('edit/')) {
+        const id = hash.replace('edit/', '');
+        loadEditor(id);
+    } else if (hash) {
         loadPost(hash);
     } else {
         loadHome();
     }
 });
 
-// 페이지 초기 진입 시 라우팅
 window.addEventListener('load', async () => {
     const hash = window.location.hash.slice(1);
 
-    // Cloudflare 인증 후 돌아온 경우 토큰 저장
     if (hash.includes('access_token=')) {
         const params = new URLSearchParams(hash);
         const token = params.get('access_token');
@@ -231,7 +313,6 @@ window.addEventListener('load', async () => {
 
         if (token) {
             localStorage.setItem('cf_access_token', token);
-            // 토큰을 URL에서 숨기기 위해 해시 변경
             if (restore) {
                 history.replaceState("", document.title, window.location.pathname + window.location.search + '#' + restore);
             } else {
@@ -243,10 +324,18 @@ window.addEventListener('load', async () => {
     await checkAuth();
     await loadSidebarPosts();
 
-    // 토큰 해시 처리를 이미 했다면 홈으로, 아니면 기존 해시(글 ID)로 이동
     const currentHash = window.location.hash.slice(1);
-    if (currentHash && !currentHash.includes('access_token=')) {
-        loadPost(currentHash);
+    if (currentHash) {
+        if (currentHash === 'write') {
+            loadEditor();
+        } else if (currentHash.startsWith('edit/')) {
+            const id = currentHash.replace('edit/', '');
+            loadEditor(id);
+        } else if (!currentHash.includes('access_token=')) {
+            loadPost(currentHash);
+        } else {
+            loadHome();
+        }
     } else {
         loadHome();
     }

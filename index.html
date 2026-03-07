@@ -75,6 +75,26 @@
                             </div>
                         </div>
                     </div>
+                    <!-- 글쓰기/수정 뷰 -->
+                    <div id="write-view" class="hidden">
+                        <div class="editor-container">
+                            <h2 id="write-title" style="margin-bottom: 2rem; color: var(--primary-color);">새 글 작성하기</h2>
+                            <form id="write-form">
+                                <div class="form-group">
+                                    <label for="post-title">포스트 제목</label>
+                                    <input type="text" id="post-title" class="form-control" placeholder="제목을 입력하세요" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="post-content">마크다운 본문</label>
+                                    <textarea id="post-content" class="form-control" placeholder="# 제목을 입력하고 마크다운으로 내용을 채워보세요!" required></textarea>
+                                </div>
+                                <div style="text-align: right; margin-top: 1rem;">
+                                    <button type="button" class="btn-cancel" id="cancel-write-btn">취소</button>
+                                    <button type="submit" class="btn-submit" id="submit-btn">작성 완료</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
                     <div id="error-view" class="hidden">
                         <p style="text-align: center; padding: 3rem 0; color: red;">포스트를 불러오는 데 실패했습니다.</p>
                     </div>
