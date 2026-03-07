@@ -1,42 +1,48 @@
 import { fetchWithAuth } from './api.js';
 
-export async function checkAuth() {
+/**
+ * 인증 상태를 확인하고 { authorized: boolean, data?: any } 객체를 반환합니다.
+ * 네트워크 오류나 인증 실패 시에도 예외를 던지지 않고 authorized: false를 반환합니다.
+ */
+export async function verifyAuthentication() {
   try {
     const response = await fetchWithAuth(`${window.API_URL}/auth/me`);
 
     // 응답이 없는 경우 (네트워크 오류 등)
     if (!response) {
       console.warn('Auth check: No response received (network error)');
-      showLoggedOutView();
-      return;
+      return { authorized: false, error: 'No response' };
     }
 
     if (!response.ok) {
-      // status가 undefined일 수 있으므로 안전하게 처리
       const status = response.status || 'unknown';
       console.warn(`Auth check failed with status: ${status}`);
-      showLoggedOutView();
-      return;
+      return { authorized: false, error: `HTTP ${status}` };
     }
 
     const data = await response.json();
-
-    const loggedInView = document.getElementById('logged-in-view');
-    const loggedOutView = document.getElementById('logged-out-view');
-    const adminControls = document.getElementById('admin-controls');
-
-    if (!loggedInView || !loggedOutView) return;
-
-    if (data.authorized) {
-      loggedInView.classList.remove('hidden');
-      loggedOutView.classList.add('hidden');
-      if (adminControls) adminControls.classList.remove('hidden');
-    } else {
-      showLoggedOutView();
-    }
+    return { authorized: !!data.authorized, data };
   } catch (error) {
     // 네트워크 오류나 JSON 파싱 오류 등
     console.warn('Auth check failed (non-critical):', error.message || error);
+    return { authorized: false, error: error.message || 'Unknown error' };
+  }
+}
+
+export async function checkAuth() {
+  const { authorized, data } = await verifyAuthentication();
+
+  const loggedInView = document.getElementById('logged-in-view');
+  const loggedOutView = document.getElementById('logged-out-view');
+  const adminControls = document.getElementById('admin-controls');
+
+  if (!loggedInView || !loggedOutView) return;
+
+  if (authorized) {
+    loggedInView.classList.remove('hidden');
+    loggedOutView.classList.add('hidden');
+    if (adminControls) adminControls.classList.remove('hidden');
+  } else {
     showLoggedOutView();
   }
 }

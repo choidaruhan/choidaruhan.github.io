@@ -1,4 +1,5 @@
 import { fetchPost, createPost, fetchWithAuth } from './api.js';
+import { verifyAuthentication } from './auth.js';
 
 // URL 해시에서 Cloudflare Access 토큰 추출 및 저장
 function extractAndStoreTokenFromHash() {
@@ -40,26 +41,17 @@ const editPostId = getEditPostId();
 
 // 인증 확인 함수
 async function verifyAuth() {
-  try {
-    // fetchWithAuth는 JSON 데이터를 반환 (Response 객체 아님)
-    const data = await fetchWithAuth(`${window.API_URL}/auth/me`);
+  const { authorized, data, error } = await verifyAuthentication();
 
-    // 데이터가 없거나 authorized가 false인 경우
-    if (!data || !data.authorized) {
-      console.warn('인증 응답:', data);
-      throw new Error(`인증 실패: ${data ? '권한 없음' : '응답 없음'}`);
-    }
-
+  if (authorized) {
     // 인증 성공
     console.log('인증 성공:', data);
     return true;
-  } catch (error) {
+  } else {
     // 더 자세한 오류 정보 로깅
     console.warn('인증 확인 실패:', {
-      message: error.message,
-      status: error.status,
-      name: error.name,
-      stack: error.stack
+      error,
+      data
     });
 
     // 인증되지 않은 사용자 처리

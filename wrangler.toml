@@ -2,6 +2,9 @@ name = "my-blog-worker"
 main = "src/index.js"
 compatibility_date = "2024-02-26"
 
+[vars]
+ALLOW_LOCAL_AUTH = "true"  # 로컬 개발 시에만 true, 프로덕션에서는 false로 설정
+
 [[d1_databases]]
 binding = "DB"
 database_name = "my-blog-db"

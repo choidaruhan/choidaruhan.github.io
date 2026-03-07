@@ -29,12 +29,42 @@ class ApiClient {
       'Content-Type': 'application/json',
       ...customHeaders
     };
-    
+
     if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
+      // 토큰 만료 검사
+      if (this._isTokenExpired(token)) {
+        console.warn('Token expired, removing from localStorage');
+        localStorage.removeItem('cf_access_token');
+      } else {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
     }
-    
+
     return headers;
+  }
+
+  /**
+   * JWT 토큰이 만료되었는지 확인
+   * @private
+   */
+  _isTokenExpired(token) {
+    try {
+      const parts = token.split('.');
+      if (parts.length !== 3) return true;
+      const payload = parts[1];
+      // Base64Url 디코딩
+      const base64 = payload.replace(/-/g, '+').replace(/_/g, '/');
+      const padded = base64 + '='.repeat((4 - base64.length % 4) % 4);
+      const json = atob(padded);
+      const decoded = JSON.parse(json);
+      if (!decoded.exp) return false; // exp가 없으면 만료되지 않은 것으로 간주
+      // exp는 초 단위 UNIX 타임스탬프
+      const now = Math.floor(Date.now() / 1000);
+      return decoded.exp < now;
+    } catch (e) {
+      console.warn('Failed to parse token for expiry check:', e);
+      return true; // 파싱 실패 시 만료된 것으로 간주
+    }
   }
 
   /**

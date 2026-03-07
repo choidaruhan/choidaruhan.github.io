@@ -10,10 +10,21 @@ export async function handleAuthRoutes(request, path, env, secret, corsHeaders) 
   // 1. 인증 상태 확인 (GET /auth/me 또는 /auth-check)
   if ((path === '/auth-check' || path === '/auth/me') && method === 'GET') {
     try {
-      const authorized = await isAuthorized(request, secret);
+      const authorized = await isAuthorized(request, secret, env);
+      const authHeader = request.headers.get('Authorization');
+      const cfJwt = request.headers.get('Cf-Access-Jwt-Assertion');
+      const host = request.headers.get('Host') || '';
+      const allowLocalAuth = env.ALLOW_LOCAL_AUTH === 'true';
       return Response.json({
         authorized,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        debug: {
+          hasAuthHeader: !!authHeader,
+          hasCfAccessJwt: !!cfJwt,
+          host,
+          allowLocalAuth,
+          environment: env.ALLOW_LOCAL_AUTH // raw value
+        }
       }, { headers: cors });
     } catch (error) {
       console.error('Auth check error:', error);

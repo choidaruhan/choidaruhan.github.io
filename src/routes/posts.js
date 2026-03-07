@@ -103,7 +103,7 @@ export async function handlePostsRoutes(request, path, env, secret, corsHeaders)
 
   // 3. 글 작성/수정 (POST /posts) - 보호됨
   if (path === '/posts' && method === 'POST') {
-    if (!(await isAuthorized(request, secret))) {
+    if (!(await isAuthorized(request, secret, env))) {
       throw Errors.unauthorized('Authentication required');
     }
 
@@ -133,7 +133,7 @@ export async function handlePostsRoutes(request, path, env, secret, corsHeaders)
 
   // 4. 글 삭제 (DELETE /posts/:id) - 보호됨
   if (path.startsWith('/posts/') && method === 'DELETE') {
-    if (!(await isAuthorized(request, secret))) {
+    if (!(await isAuthorized(request, secret, env))) {
       throw Errors.unauthorized('Authentication required');
     }
 
