@@ -6,24 +6,19 @@ import { fetchWithAuth } from './api.js';
  */
 export async function verifyAuthentication() {
   try {
-    const response = await fetchWithAuth(`${window.API_URL}/auth/me`);
+    const data = await fetchWithAuth(`${window.API_URL}/auth/me`);
 
     // 응답이 없는 경우 (네트워크 오류 등)
-    if (!response) {
-      console.warn('Auth check: No response received (network error)');
-      return { authorized: false, error: 'No response' };
+    if (!data) {
+      console.warn('Auth check: No data received');
+      return { authorized: false, error: 'No data' };
     }
 
-    if (!response.ok) {
-      const status = response.status || 'unknown';
-      console.warn(`Auth check failed with status: ${status}`);
-      return { authorized: false, error: `HTTP ${status}` };
-    }
-
-    const data = await response.json();
+    // fetchWithAuth가 성공했다면 응답이 ok인 것이며, 
+    // 반환된 data 객체의 authorized 필드를 확인합니다.
     return { authorized: !!data.authorized, data };
   } catch (error) {
-    // 네트워크 오류나 JSON 파싱 오류 등
+    // ApiError 또는 일반적인 오류 처리
     console.warn('Auth check failed (non-critical):', error.message || error);
     return { authorized: false, error: error.message || 'Unknown error' };
   }
