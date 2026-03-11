@@ -1,16 +1,13 @@
 /**
  * Cloudflare Workers API for Blog
  * D1 데이터베이스를 사용하여 포스트를 관리합니다.
+ * Authentication via Cloudflare Access JWT.
  */
 
 export interface Env {
   DB: D1Database;
-  ADMIN_SECRET?: string;
   ALLOW_LOCAL_AUTH?: string;
-  GITHUB_CLIENT_ID?: string;
-  GITHUB_CLIENT_SECRET?: string;
-  SESSION_SECRET?: string;
-  FRONTEND_URL?: string;
+  ACCESS_TEAM_DOMAIN?: string;
 }
 
 interface Post {
@@ -22,80 +19,26 @@ interface Post {
   updated_at: string;
 }
 
-// JWT utilities
-function base64UrlEncode(buffer: ArrayBuffer): string {
-  const bytes = new Uint8Array(buffer);
-  let binary = '';
-  for (let i = 0; i < bytes.byteLength; i++) {
-    binary += String.fromCharCode(bytes[i]);
-  }
-  const base64 = btoa(binary);
-  return base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-}
+// Import jose for JWT verification
+import { jwtVerify } from 'jose';
 
-function base64UrlDecode(str: string): Uint8Array {
-  let base64 = str.replace(/-/g, '+').replace(/_/g, '/');
-  const pad = base64.length % 4;
-  if (pad) {
-    if (pad === 1) throw new Error('Invalid base64url');
-    base64 += '='.repeat(4 - pad);
-  }
-  const binary = atob(base64);
-  const bytes = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i++) {
-    bytes[i] = binary.charCodeAt(i);
-  }
-  return bytes;
-}
+// JWKS caching
+let jwksCache: jose.JWKSet | null = null;
+let jwksCacheTime = 0;
+const JWKS_CACHE_TTL = 10 * 60 * 1000; // 10 minutes
 
-async function signJWT(payload: any, secret: string): Promise<string> {
-  const header = { alg: 'HS256', typ: 'JWT' };
-  const encodedHeader = await base64UrlEncode(new TextEncoder().encode(JSON.stringify(header)));
-  const encodedPayload = await base64UrlEncode(new TextEncoder().encode(JSON.stringify(payload)));
-  const signingInput = `${encodedHeader}.${encodedPayload}`;
-  const key = await crypto.subtle.importKey(
-    'raw',
-    new TextEncoder().encode(secret),
-    { name: 'HMAC', hash: 'SHA-256' },
-    false,
-    ['sign']
-  );
-  const signature = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(signingInput));
-  const encodedSignature = await base64UrlEncode(signature);
-  return `${signingInput}.${encodedSignature}`;
-}
-
-async function verifyJWT(token: string, secret: string): Promise<any | null> {
-  const parts = token.split('.');
-  if (parts.length !== 3) return null;
-  const [encodedHeader, encodedPayload, encodedSignature] = parts;
-  // Verify signature
-  const key = await crypto.subtle.importKey(
-    'raw',
-    new TextEncoder().encode(secret),
-    { name: 'HMAC', hash: 'SHA-256' },
-    false,
-    ['verify']
-  );
-  const signature = base64UrlDecode(encodedSignature);
-  const isValid = await crypto.subtle.verify(
-    'HMAC',
-    key,
-    signature,
-    new TextEncoder().encode(`${encodedHeader}.${encodedPayload}`)
-  );
-  if (!isValid) return null;
-  // Decode payload
-  try {
-    const payloadBytes = base64UrlDecode(encodedPayload);
-    const payload = JSON.parse(new TextDecoder().decode(payloadBytes));
-    if (payload.exp && Date.now() >= payload.exp * 1000) {
-      return null;
-    }
-    return payload;
-  } catch (e) {
-    return null;
+async function getJwks(teamDomain: string): Promise<jose.JWKSet> {
+  const now = Date.now();
+  if (jwksCache && (now - jwksCacheTime) < JWKS_CACHE_TTL) {
+    return jwksCache;
   }
+  const res = await fetch(`https://${teamDomain}/cdn-cgi/access/certs`);
+  if (!res.ok) {
+    throw new Error(`Failed to fetch JWKS: ${res.status}`);
+  }
+  jwksCache = await res.json() as jose.JWKSet;
+  jwksCacheTime = now;
+  return jwksCache;
 }
 
 // 허용할 오리진
@@ -124,24 +67,23 @@ async function checkAuth(request: Request, env: Env): Promise<boolean> {
     return true;
   }
 
-  const auth = request.headers.get("Authorization");
+  const token = request.headers.get("Cf-Access-Jwt-Assertion");
+  if (!token) {
+    return false;
+  }
 
-  // Check for ADMIN_SECRET (simple token)
-  const expectedAdmin = env.ADMIN_SECRET ? `Bearer ${env.ADMIN_SECRET}` : null;
-  if (auth === expectedAdmin) {
+  const teamDomain = env.ACCESS_TEAM_DOMAIN || 'choidaruhan.cloudflareaccess.com';
+  try {
+    const jwks = await getJwks(teamDomain);
+    await jwtVerify(token, jwks, {
+      issuer: `https://${teamDomain}`,
+      audience: `https://${teamDomain}`
+    });
     return true;
+  } catch (e) {
+    console.error('JWT verification failed:', e);
+    return false;
   }
-
-  // Check for JWT (GitHub OAuth)
-  if (auth && auth.startsWith("Bearer ")) {
-    const token = auth.slice(7);
-    if (token && env.SESSION_SECRET) {
-      const payload = await verifyJWT(token, env.SESSION_SECRET);
-      return payload !== null;
-    }
-  }
-
-  return false;
 }
 
 function generateSlug(title: string): string {
@@ -164,141 +106,47 @@ export default {
     }
 
     try {
-      // OAuth routes
-      if (path === "/auth/github" && request.method === "GET") {
-        const clientId = env.GITHUB_CLIENT_ID;
-        if (!clientId) {
-          return new Response(JSON.stringify({ error: "GitHub OAuth not configured" }), { status: 500, headers: corsHeaders });
-        }
-
-        const redirectTo = url.searchParams.get("redirect_to") || "/";
-        // Validate redirect_to is relative or matches FRONTEND_URL
-        let safeRedirect = redirectTo;
-        if (redirectTo.startsWith('http')) {
-          const frontendUrl = env.FRONTEND_URL;
-          if (!frontendUrl || !redirectTo.startsWith(frontendUrl)) {
-            safeRedirect = "/";
-          }
-        }
-
-        // Generate state and store in DB
-        const state = crypto.randomUUID();
-        await env.DB.prepare("INSERT INTO oauth_states (state, redirect_to) VALUES (?, ?)").bind(state, safeRedirect).run();
-
-        const scope = "read:user,user:email";
-        const redirectUri = `${url.origin}/auth/callback`;
-        const githubAuthUrl = `https://github.com/login/oauth/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent(scope)}&state=${state}`;
-        return Response.redirect(githubAuthUrl, 302);
-      }
-
-      if (path === "/auth/callback" && request.method === "GET") {
-        const code = url.searchParams.get("code");
-        const state = url.searchParams.get("state");
-        if (!code) {
-          return new Response(JSON.stringify({ error: "Missing code" }), { status: 400, headers: corsHeaders });
-        }
-
-        // Verify state
-        let redirectTo = "/";
-        if (state) {
-          const { results } = await env.DB.prepare("SELECT redirect_to FROM oauth_states WHERE state = ?").bind(state).all<{ redirect_to: string }>();
-          if (results.length > 0) {
-            redirectTo = results[0].redirect_to;
-          }
-          // Delete used state
-          await env.DB.prepare("DELETE FROM oauth_states WHERE state = ?").bind(state).run();
-        }
-
-        const clientId = env.GITHUB_CLIENT_ID;
-        const clientSecret = env.GITHUB_CLIENT_SECRET;
-        if (!clientId || !clientSecret) {
-          return new Response(JSON.stringify({ error: "GitHub OAuth not configured" }), { status: 500, headers: corsHeaders });
-        }
-
-        // Exchange code for access token
-        const tokenRes = await fetch("https://github.com/login/oauth/access_token", {
-          method: "POST",
-          headers: { "Accept": "application/json", "Content-Type": "application/json" },
-          body: JSON.stringify({
-            client_id: clientId,
-            client_secret: clientSecret,
-            code
-          })
-        });
-        const tokenData = await tokenRes.json();
-        if (tokenData.error) {
-          return new Response(JSON.stringify({ error: tokenData.error_description || tokenData.error }), { status: 400, headers: corsHeaders });
-        }
-        const accessToken = tokenData.access_token;
-        if (!accessToken) {
-          return new Response(JSON.stringify({ error: "No access token" }), { status: 400, headers: corsHeaders });
-        }
-
-        // Get user info
-        const userRes = await fetch("https://api.github.com/user", {
-          headers: { "Authorization": `token ${accessToken}` }
-        });
-        const user = await userRes.json();
-
-        // Generate JWT
-        const sessionSecret = env.SESSION_SECRET;
-        if (!sessionSecret) {
-          return new Response(JSON.stringify({ error: "Session secret not configured" }), { status: 500, headers: corsHeaders });
-        }
-
-        const now = Math.floor(Date.now() / 1000);
-        const payload = {
-          sub: String(user.id),
-          login: user.login,
-          name: user.name,
-          avatar: user.avatar_url,
-          iat: now,
-          exp: now + (60 * 60 * 24 * 30) // 30 days
-        };
-        const jwt = await signJWT(payload, sessionSecret);
-
-        // Build redirect URL
-        let redirectUrl: string;
-        if (redirectTo.startsWith('http')) {
-          redirectUrl = redirectTo;
-        } else {
-          const frontendUrl = env.FRONTEND_URL || "";
-          const base = frontendUrl.replace(/\/$/, '');
-          redirectUrl = `${base}${redirectTo}`;
-        }
-        // Append token as query param
-        const separator = redirectUrl.includes('?') ? '&' : '?';
-        redirectUrl = `${redirectUrl}${separator}auth_token=${jwt}`;
-
-        return Response.redirect(redirectUrl, 302);
-      }
-
+      // GET /auth/me - return user info from Access JWT
       if (path === "/auth/me" && request.method === "GET") {
-        const auth = request.headers.get("Authorization");
-        if (!auth || !auth.startsWith("Bearer ")) {
-          return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: corsHeaders });
+        const token = request.headers.get("Cf-Access-Jwt-Assertion");
+        if (!token) {
+          return new Response(JSON.stringify({ error: "Unauthorized" }), {
+            status: 401,
+            headers: { "Content-Type": "application/json", ...corsHeaders },
+          });
         }
-        const token = auth.slice(7);
-        const sessionSecret = env.SESSION_SECRET;
-        if (!sessionSecret) {
-          return new Response(JSON.stringify({ error: "Server misconfigured" }), { status: 500, headers: corsHeaders });
+
+        const teamDomain = env.ACCESS_TEAM_DOMAIN || 'choidaruhan.cloudflareaccess.com';
+        try {
+          const jwks = await getJwks(teamDomain);
+          const { payload } = await jwtVerify(token, jwks, {
+            issuer: `https://${teamDomain}`,
+            audience: `https://${teamDomain}`
+          });
+
+          return new Response(JSON.stringify({
+            user: {
+              email: payload.email,
+              name: payload.name || payload.email,
+            }
+          }), {
+            headers: { "Content-Type": "application/json", ...corsHeaders },
+          });
+        } catch (e) {
+          console.error('Auth error:', e);
+          return new Response(JSON.stringify({ error: "Invalid token" }), {
+            status: 401,
+            headers: { "Content-Type": "application/json", ...corsHeaders },
+          });
         }
-        const payload = await verifyJWT(token, sessionSecret);
-        if (!payload) {
-          return new Response(JSON.stringify({ error: "Invalid token" }), { status: 401, headers: corsHeaders });
-        }
-        return new Response(JSON.stringify({ user: payload }), { headers: { "Content-Type": "application/json", ...corsHeaders } });
       }
 
-      if (path === "/auth/logout" && request.method === "POST") {
-        return new Response(JSON.stringify({ success: true }), { headers: { "Content-Type": "application/json", ...corsHeaders } });
-      }
-
-      // API routes require auth for write
+      // GET /api/posts - 모든 포스트 가져오기
       if (path === "/api/posts" && request.method === "GET") {
         const searchQuery = url.searchParams.get("q");
 
         if (searchQuery) {
+          // 검색 기능
           const { results } = await env.DB.prepare(
             "SELECT * FROM posts WHERE title LIKE ? OR content LIKE ? ORDER BY created_at DESC"
           ).bind(`%${searchQuery}%`, `%${searchQuery}%`).all<Post>();
@@ -316,6 +164,7 @@ export default {
         });
       }
 
+      // GET /api/posts/:id - 특정 포스트 가져오기
       const postMatch = path.match(/^\/api\/posts\/(\d+)$/);
       if (postMatch && request.method === "GET") {
         const postId = postMatch[1];
@@ -335,6 +184,7 @@ export default {
         });
       }
 
+      // POST /api/posts - 새 포스트 생성
       if (path === "/api/posts" && request.method === "POST") {
         if (!await checkAuth(request, env)) {
           return new Response(JSON.stringify({ error: "Unauthorized" }), {
@@ -381,6 +231,7 @@ export default {
         });
       }
 
+      // PUT /api/posts/:id - 포스트 수정
       const putMatch = path.match(/^\/api\/posts\/(\d+)$/);
       if (putMatch && request.method === "PUT") {
         if (!await checkAuth(request, env)) {
@@ -433,6 +284,7 @@ export default {
         });
       }
 
+      // DELETE /api/posts/:id - 포스트 삭제
       const deleteMatch = path.match(/^\/api\/posts\/(\d+)$/);
       if (deleteMatch && request.method === "DELETE") {
         if (!await checkAuth(request, env)) {

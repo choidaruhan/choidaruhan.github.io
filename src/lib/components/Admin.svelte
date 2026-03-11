@@ -4,14 +4,12 @@
   import { API_BASE } from '@/lib/config';
   import type { Post } from '@/lib/api/blogApi';
 
-  const TOKEN_KEY = 'blog_auth_token';
   const api = new BlogApiClient(API_BASE);
 
   let title = '';
   let content = '';
   let slug = '';
-  let token = '';
-  let user: { login: string; name?: string; avatar?: string } | null = null;
+  let user: { email: string; name?: string } | null = null;
   let editingId: number | null = null;
   let message = '';
   let error = '';
@@ -19,46 +17,28 @@
   let checkingAuth = true;
 
   onMount(async () => {
-    // Check for token in URL (from OAuth callback)
-    const url = new URL(window.location.href);
-    const authToken = url.searchParams.get('auth_token');
-    if (authToken) {
-      localStorage.setItem(TOKEN_KEY, authToken);
-      token = authToken;
-      // Remove token from URL
-      url.searchParams.delete('auth_token');
-      window.history.replaceState({}, '', url.toString());
-    }
-
-    // Check for stored token
-    if (!token) {
-      token = localStorage.getItem(TOKEN_KEY) || '';
-    }
-
-    // Verify token with server
-    if (token) {
-      try {
-        const res = await fetch(`${API_BASE}/auth/me`, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        if (res.ok) {
-          const data = await res.json();
-          user = data.user;
-        } else {
-          // Invalid token
-          localStorage.removeItem(TOKEN_KEY);
-          token = '';
-        }
-      } catch (e) {
-        console.error('Auth check failed', e);
+    // Check authentication via Cloudflare Access
+    try {
+      const res = await fetch(`${API_BASE}/auth/me`);
+      if (res.ok) {
+        const data = await res.json();
+        user = data.user;
+      } else {
+        user = null;
+        error = '글을 작성하려면 Cloudflare Access 인증이 필요합니다.';
       }
+    } catch (e) {
+      user = null;
+      error = '인증 확인에 실패했습니다.';
+      console.error('Auth check failed:', e);
+    } finally {
+      checkingAuth = false;
     }
-
-    checkingAuth = false;
 
     // Check for edit mode via URL params
+    const url = new URL(window.location.href);
     const editId = url.searchParams.get('edit');
-    if (editId) {
+    if (editId && user) {
       editingId = parseInt(editId);
       try {
         loading = true;
@@ -84,8 +64,8 @@
       return;
     }
 
-    if (!token) {
-      error = '로그인이 필요합니다.';
+    if (!user) {
+      error = '인증이 필요합니다.';
       return;
     }
 
@@ -98,10 +78,10 @@
     try {
       loading = true;
       if (editingId) {
-        await api.updatePost(editingId, postData, token);
+        await api.updatePost(editingId, postData);
         message = '글이 수정되었습니다.';
       } else {
-        await api.createPost(postData, token);
+        await api.createPost(postData);
         message = '글이 작성되었습니다.';
         title = '';
         content = '';
@@ -114,8 +94,6 @@
     } catch (err: any) {
       if (err.message === 'Unauthorized' || err.message.includes('401') || err.message.toLowerCase().includes('unauthorized')) {
         error = '세션이 만료되었습니다. 다시 로그인해주세요.';
-        localStorage.removeItem(TOKEN_KEY);
-        token = '';
         user = null;
       } else {
         error = err.message || '오류가 발생했습니다.';
@@ -134,16 +112,10 @@
     }
   }
 
-  function login() {
-    const redirectTo = encodeURIComponent('/admin');
-    window.location.href = `${API_BASE}/auth/github?redirect_to=${redirectTo}`;
-  }
-
   function logout() {
-    localStorage.removeItem(TOKEN_KEY);
-    token = '';
-    user = null;
-    fetch(`${API_BASE}/auth/logout`, { method: 'POST' }).catch(() => {});
+    // Cloudflare Access logout
+    const redirectTo = encodeURIComponent('https://choidaruhan.github.io');
+    window.location.href = `https://choidaruhan.cloudflareaccess.com/logout?redirectTo=${redirectTo}`;
   }
 </script>
 
@@ -152,7 +124,7 @@
     <h1>{editingId ? '✏️ 글 수정' : '📝 새 글 작성'}</h1>
     {#if user}
       <div class="user-info">
-        <span>{user.name || user.login}님 환영합니다</span>
+        <span>{user.name || user.email}님 환영합니다</span>
         <button on:click={logout} class="logout-btn">로그아웃</button>
       </div>
     {/if}
@@ -160,10 +132,14 @@
 
   {#if checkingAuth}
     <div class="loading">인증 확인 중...</div>
-  {:else if !token}
+  {:else if !user}
     <div class="login-prompt">
-      <p>글을 작성하려면 로그인이 필요합니다.</p>
-      <button on:click={login} class="login-btn">GitHub로 로그인</button>
+      <p>글을 작성하려면 Cloudflare Access 인증이 필요합니다.</p>
+      <p class="hint">
+        이 사이트는 Cloudflare Access로 보호되어 있습니다.<br>
+        관리자에게 접근 권한을 요청하세요.
+      </p>
+      <button on:click={logout} class="login-btn">Cloudflare Access 로그인</button>
     </div>
   {:else}
     <!-- The form is only visible when authenticated -->
@@ -180,7 +156,7 @@
     <div class="error">{error}</div>
   {/if}
 
-  {#if token && !checkingAuth}
+  {#if user && !checkingAuth}
     <form on:submit={handleSubmit}>
       <div class="form-group">
         <label for="title">제목 *</label>
@@ -297,19 +273,27 @@
     border-radius: 8px;
   }
 
+  .hint {
+    font-size: 0.9rem;
+    color: #666;
+    margin: 16px 0;
+  }
+
   .login-btn {
     margin-top: 16px;
     padding: 12px 24px;
-    background: #24292e;
+    background: #f57f17; /* Cloudflare orange-ish */
     color: white;
     border: none;
     border-radius: 6px;
     cursor: pointer;
     font-size: 1rem;
+    text-decoration: none;
+    display: inline-block;
   }
 
   .login-btn:hover {
-    background: #1a1e21;
+    background: #e65100;
   }
 
   .form-group {

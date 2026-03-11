@@ -7,8 +7,8 @@
   let searchQuery = "";
   let searchTimeout: ReturnType<typeof setTimeout>;
 
-  let isLoggedIn = false;
-  const TOKEN_KEY = 'blog_auth_token';
+  let user: { email: string; name?: string } | null = null;
+  let loadingAuth = true;
 
   function selectPost(post: any) {
     selectedPost.set(post);
@@ -25,26 +25,26 @@
     window.location.href = '/admin';
   }
 
-  function checkAuth() {
-    const token = localStorage.getItem(TOKEN_KEY);
-    isLoggedIn = !!token;
-  }
-
-  onMount(() => {
-    checkAuth();
-    window.addEventListener('storage', checkAuth);
-    return () => window.removeEventListener('storage', checkAuth);
+  onMount(async () => {
+    try {
+      const res = await fetch(`${API_BASE}/auth/me`);
+      if (res.ok) {
+        const data = await res.json();
+        user = data.user;
+      } else {
+        user = null;
+      }
+    } catch (e) {
+      user = null;
+    } finally {
+      loadingAuth = false;
+    }
   });
 
-  function login() {
-    const redirectTo = encodeURIComponent(window.location.pathname + window.location.search);
-    window.location.href = `${API_BASE}/auth/github?redirect_to=${redirectTo}`;
-  }
-
   function logout() {
-    localStorage.removeItem(TOKEN_KEY);
-    isLoggedIn = false;
-    fetch(`${API_BASE}/auth/logout`, { method: 'POST' }).catch(() => {});
+    // Cloudflare Access logout
+    const redirectTo = encodeURIComponent(window.location.origin);
+    window.location.href = `https://choidaruhan.cloudflareaccess.com/logout?redirectTo=${redirectTo}`;
   }
 </script>
 
@@ -52,7 +52,9 @@
   <div class="sidebar-header">
     <h1 class="blog-title">최다루한의 블로그</h1>
     <div class="auth-section">
-      {#if isLoggedIn}
+      {#if loadingAuth}
+        <p class="auth-loading">인증 확인 중...</p>
+      {:else if user}
         <div class="user-links">
           <button class="admin-btn" on:click={goToAdmin}>
             ✏️ 글쓰기
@@ -62,9 +64,9 @@
           </button>
         </div>
       {:else}
-        <button class="login-btn" on:click={login}>
-          🔐 GitHub 로그인
-        </button>
+        <p class="login-hint">
+          글쓰기는 Cloudflare Access로 보호되어 있습니다.
+        </p>
       {/if}
     </div>
   </div>
@@ -134,13 +136,19 @@
     margin-top: 12px;
   }
 
+  .auth-loading, .login-hint {
+    font-size: 0.85rem;
+    color: #888;
+    padding: 8px 0;
+  }
+
   .user-links {
     display: flex;
     flex-direction: column;
     gap: 8px;
   }
 
-  .login-btn, .admin-btn, .logout-btn {
+  .admin-btn, .logout-btn {
     width: 100%;
     padding: 8px 12px;
     border: none;
@@ -150,16 +158,6 @@
     transition: background 0.2s;
     text-align: left;
     font-family: inherit;
-  }
-
-  .login-btn {
-    background: rgba(99, 102, 241, 0.2);
-    color: #a5b4fc;
-  }
-
-  .login-btn:hover {
-    background: rgba(99, 102, 241, 0.4);
-    color: #fff;
   }
 
   .admin-btn {
