@@ -26,46 +26,33 @@ export class BlogApiClient {
     return await res.json();
   }
 
-  async createPost(post: Omit<Post, 'id'>, token?: string | null): Promise<Post> {
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-    };
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
-    }
+  async createPost(post: Omit<Post, 'id'>): Promise<Post> {
     const res = await fetch(`${this.apiBase}/posts`, {
       method: 'POST',
-      headers,
+      headers: {
+        'Content-Type': 'application/json',
+      },
       body: JSON.stringify(post),
     });
     if (!res.ok) throw new Error('Failed to submit post');
     return await res.json();
   }
 
-  async updatePost(id: number, post: Omit<Post, 'id'>, token?: string | null): Promise<Post> {
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-    };
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
-    }
+  async updatePost(id: number, post: Omit<Post, 'id'>): Promise<Post> {
     const res = await fetch(`${this.apiBase}/posts/${id}`, {
       method: 'PUT',
-      headers,
+      headers: {
+        'Content-Type': 'application/json',
+      },
       body: JSON.stringify(post),
     });
     if (!res.ok) throw new Error('Update failed');
     return await res.json();
   }
 
-  async deletePost(id: number, token?: string | null): Promise<void> {
-    const headers: Record<string, string> = {};
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
-    }
+  async deletePost(id: number): Promise<void> {
     const res = await fetch(`${this.apiBase}/posts/${id}`, {
       method: 'DELETE',
-      headers,
     });
     if (!res.ok) throw new Error('Delete failed');
   }
