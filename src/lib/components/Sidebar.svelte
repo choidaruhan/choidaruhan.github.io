@@ -26,9 +26,8 @@
   }
 
   function login() {
-    const teamDomain = 'choidaruhan.cloudflareaccess.com';
-    const redirectTo = encodeURIComponent('https://choidaruhan.github.io/admin');
-    window.location.href = `https://${teamDomain}/cdn-cgi/access/login?redirect_to=${redirectTo}`;
+    const redirectTo = encodeURIComponent(window.location.origin + '/admin');
+    window.location.href = `${API_BASE}/auth/login?redirect_to=${redirectTo}`;
   }
 
   onMount(async () => {
@@ -48,9 +47,8 @@
   });
 
   function logout() {
-    // Cloudflare Access logout
     const redirectTo = encodeURIComponent(window.location.origin);
-    window.location.href = `https://choidaruhan.cloudflareaccess.com/logout?redirectTo=${redirectTo}`;
+    window.location.href = `${API_BASE}/auth/logout?redirect_to=${redirectTo}`;
   }
 </script>
 

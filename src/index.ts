@@ -141,6 +141,32 @@ export default {
         }
       }
 
+      // GET /auth/login - Redirect to frontend after Access authentication
+      if (path === "/auth/login") {
+        const redirectTo = url.searchParams.get("redirect_to") || env.FRONTEND_URL || "/";
+        return new Response(null, {
+          status: 302,
+          headers: {
+            "Location": redirectTo,
+            ...corsHeaders
+          }
+        });
+      }
+
+      // GET /auth/logout - Redirect to Access logout
+      if (path === "/auth/logout") {
+        const teamDomain = env.ACCESS_TEAM_DOMAIN || 'choidaruhan.cloudflareaccess.com';
+        const redirectTo = url.searchParams.get("redirect_to") || env.FRONTEND_URL || "/";
+        const logoutUrl = `https://${teamDomain}/logout?redirectTo=${encodeURIComponent(redirectTo)}`;
+        return new Response(null, {
+          status: 302,
+          headers: {
+            "Location": logoutUrl,
+            ...corsHeaders
+          }
+        });
+      }
+
       // GET /api/posts - 모든 포스트 가져오기
       if (path === "/api/posts" && request.method === "GET") {
         const searchQuery = url.searchParams.get("q");
