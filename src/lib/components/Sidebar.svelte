@@ -1,9 +1,14 @@
 <script lang="ts">
+  import { onMount } from "svelte";
   import { filteredPosts, loading, selectedPost, searchPosts } from "@/lib/stores/posts.store";
   import { formatPostDate } from "@/lib/utils/date";
+  import { API_BASE } from "@/lib/config";
 
   let searchQuery = "";
   let searchTimeout: ReturnType<typeof setTimeout>;
+
+  let isLoggedIn = false;
+  const TOKEN_KEY = 'blog_auth_token';
 
   function selectPost(post: any) {
     selectedPost.set(post);
@@ -15,11 +20,53 @@
       searchPosts(searchQuery);
     }, 300);
   }
+
+  function goToAdmin() {
+    window.location.href = '/admin';
+  }
+
+  function checkAuth() {
+    const token = localStorage.getItem(TOKEN_KEY);
+    isLoggedIn = !!token;
+  }
+
+  onMount(() => {
+    checkAuth();
+    window.addEventListener('storage', checkAuth);
+    return () => window.removeEventListener('storage', checkAuth);
+  });
+
+  function login() {
+    const redirectTo = encodeURIComponent(window.location.pathname + window.location.search);
+    window.location.href = `${API_BASE}/auth/github?redirect_to=${redirectTo}`;
+  }
+
+  function logout() {
+    localStorage.removeItem(TOKEN_KEY);
+    isLoggedIn = false;
+    fetch(`${API_BASE}/auth/logout`, { method: 'POST' }).catch(() => {});
+  }
 </script>
 
 <aside class="sidebar">
   <div class="sidebar-header">
     <h1 class="blog-title">최다루한의 블로그</h1>
+    <div class="auth-section">
+      {#if isLoggedIn}
+        <div class="user-links">
+          <button class="admin-btn" on:click={goToAdmin}>
+            ✏️ 글쓰기
+          </button>
+          <button class="logout-btn" on:click={logout}>
+            로그아웃
+          </button>
+        </div>
+      {:else}
+        <button class="login-btn" on:click={login}>
+          🔐 GitHub 로그인
+        </button>
+      {/if}
+    </div>
   </div>
 
   <div class="search-container">
@@ -81,6 +128,57 @@
     font-size: 1.25rem;
     font-weight: 600;
     color: #fff;
+  }
+
+  .auth-section {
+    margin-top: 12px;
+  }
+
+  .user-links {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .login-btn, .admin-btn, .logout-btn {
+    width: 100%;
+    padding: 8px 12px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    transition: background 0.2s;
+    text-align: left;
+    font-family: inherit;
+  }
+
+  .login-btn {
+    background: rgba(99, 102, 241, 0.2);
+    color: #a5b4fc;
+  }
+
+  .login-btn:hover {
+    background: rgba(99, 102, 241, 0.4);
+    color: #fff;
+  }
+
+  .admin-btn {
+    background: rgba(99, 102, 241, 0.2);
+    color: #a5b4fc;
+  }
+
+  .admin-btn:hover {
+    background: rgba(99, 102, 241, 0.4);
+    color: #fff;
+  }
+
+  .logout-btn {
+    background: rgba(255, 255, 255, 0.1);
+    color: #ccc;
+  }
+
+  .logout-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
   }
 
   .search-container {

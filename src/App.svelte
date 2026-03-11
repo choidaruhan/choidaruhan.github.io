@@ -1,21 +1,52 @@
 <script lang="ts">
-  import { onMount } from "svelte";
+  import { onMount, onDestroy } from "svelte";
   import Sidebar from "./lib/components/Sidebar.svelte";
   import HomeView from "./lib/components/HomeView.svelte";
   import PostView from "./lib/components/PostView.svelte";
+  import Admin from "./lib/components/Admin.svelte";
   import { fetchPosts, selectedPost } from "./lib/stores/posts.store";
 
   let loading = true;
   let error = "";
+  let currentRoute = "/";
+
+  function handleRouteChange() {
+    currentRoute = window.location.pathname;
+    // Reset selected post when navigating home
+    if (currentRoute === "/") {
+      selectedPost.set(null);
+    }
+  }
 
   onMount(async () => {
-    try {
-      await fetchPosts("/api");
-      loading = false;
-    } catch (e) {
-      error = "블로그를 불러오는데 실패했습니다.";
+    // Handle OAuth callback token (store in localStorage)
+    const url = new URL(window.location.href);
+    const authToken = url.searchParams.get('auth_token');
+    if (authToken) {
+      localStorage.setItem('blog_auth_token', authToken);
+      url.searchParams.delete('auth_token');
+      window.history.replaceState({}, '', url.toString());
+    }
+
+    window.addEventListener('popstate', handleRouteChange);
+    handleRouteChange();
+
+    // Load posts only if not on admin page
+    if (currentRoute === "/" || currentRoute.startsWith("/posts")) {
+      try {
+        await fetchPosts("/api");
+        loading = false;
+      } catch (e) {
+        error = "블로그를 불러오는데 실패했습니다.";
+        loading = false;
+      }
+    } else {
       loading = false;
     }
+  });
+
+  onDestroy(() => {
+    window.removeEventListener('popstate', handleRouteChange);
   });
 </script>
 
@@ -36,6 +67,8 @@
       <div class="error">
         <p>{error}</p>
       </div>
+    {:else if currentRoute === "/admin" || currentRoute === "/admin/"}
+      <Admin />
     {:else if $selectedPost}
       <PostView />
     {:else}

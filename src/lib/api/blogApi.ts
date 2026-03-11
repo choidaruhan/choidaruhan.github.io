@@ -3,8 +3,10 @@ const DEFAULT_API_BASE = '/api';
 export interface Post {
   id?: number;
   title: string;
+  slug?: string;
   content: string;
   created_at?: string;
+  updated_at?: string;
   date?: string;
   published_at?: string;
 }
@@ -69,7 +71,7 @@ export class BlogApiClient {
   }
 
   async searchPosts(query: string): Promise<Post[]> {
-    const res = await fetch(`${this.apiBase}/search?q=${encodeURIComponent(query)}`);
+    const res = await fetch(`${this.apiBase}/posts?q=${encodeURIComponent(query)}`);
     if (!res.ok) throw new Error('Search failed');
     return await res.json();
   }
