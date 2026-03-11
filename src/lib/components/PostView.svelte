@@ -14,7 +14,7 @@
     </header>
 
     <div class="post-content">
-      {@html renderMarkdown(displayedPost.content || displayedPost.body || "")}
+      {@html renderMarkdown(displayedPost.content || "")}
     </div>
   </article>
 {:else}

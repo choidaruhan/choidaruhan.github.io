@@ -1,6 +1,11 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { filteredPosts, loading, selectedPost, searchPosts } from "@/lib/stores/posts.store";
+  import {
+    filteredPosts,
+    loading,
+    selectedPost,
+    searchPosts,
+  } from "@/lib/stores/posts.store";
   import { formatPostDate } from "@/lib/utils/date";
   import { API_BASE } from "@/lib/config";
 
@@ -22,25 +27,27 @@
   }
 
   function goToAdmin() {
-    window.location.href = '/admin';
+    window.location.href = "/admin";
   }
 
   function login() {
-    const redirectTo = encodeURIComponent(window.location.origin + '/admin');
+    const redirectTo = encodeURIComponent(window.location.origin + "/admin");
     window.location.href = `${API_BASE}/auth/login?redirect_to=${redirectTo}`;
   }
 
   onMount(async () => {
     try {
-      const token = localStorage.getItem('blog_auth_token');
+      const token = localStorage.getItem("blog_auth_token");
       const headers: Record<string, string> = {};
       if (token) {
-        headers['Cf-Access-Jwt-Assertion'] = token;
+        headers["Cf-Access-Jwt-Assertion"] = token;
       }
-      
+
       const res = await fetch(`${API_BASE}/auth/me`, { headers });
       if (res.ok) {
-        const data = await res.json();
+        const data = (await res.json()) as {
+          user: { email: string; name?: string };
+        };
         user = data.user;
       } else {
         user = null;
@@ -53,7 +60,7 @@
   });
 
   function logout() {
-    localStorage.removeItem('blog_auth_token');
+    localStorage.removeItem("blog_auth_token");
     const redirectTo = encodeURIComponent(window.location.origin);
     window.location.href = `${API_BASE}/auth/logout?redirect_to=${redirectTo}`;
   }
@@ -67,12 +74,8 @@
         <p class="auth-loading">인증 확인 중...</p>
       {:else if user}
         <div class="user-links">
-          <button class="admin-btn" on:click={goToAdmin}>
-            ✏️ 글쓰기
-          </button>
-          <button class="logout-btn" on:click={logout}>
-            로그아웃
-          </button>
+          <button class="admin-btn" on:click={goToAdmin}> ✏️ 글쓰기 </button>
+          <button class="logout-btn" on:click={logout}> 로그아웃 </button>
         </div>
       {:else}
         <button class="login-btn" on:click={login}>
@@ -94,7 +97,7 @@
 
   <div class="post-list-container">
     <h2 class="section-title">글 목록</h2>
-    
+
     {#if $loading}
       <p class="loading">로딩 중...</p>
     {:else if $filteredPosts.length === 0}
@@ -147,7 +150,7 @@
     margin-top: 12px;
   }
 
-  .auth-loading, .login-hint {
+  .auth-loading {
     font-size: 0.85rem;
     color: #888;
     padding: 8px 0;
@@ -159,7 +162,8 @@
     gap: 8px;
   }
 
-  .admin-btn, .logout-btn {
+  .admin-btn,
+  .logout-btn {
     width: 100%;
     padding: 8px 12px;
     border: none;
@@ -294,7 +298,8 @@
     color: #666;
   }
 
-  .loading, .no-posts {
+  .loading,
+  .no-posts {
     color: #666;
     padding: 12px;
     font-size: 0.9rem;

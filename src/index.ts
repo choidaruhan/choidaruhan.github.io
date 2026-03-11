@@ -77,7 +77,8 @@ async function checkAuth(request: Request, env: Env): Promise<boolean> {
     const jwks = getJwks(teamDomain);
     await jwtVerify(token, jwks, {
       issuer: `https://${teamDomain}`,
-      audience: `https://${teamDomain}`,
+      audience:
+        "8e3955f754ebb3490348080f65567e22c2de9bf1086d94f875abe8a9c485422c",
     });
     return true;
   } catch (e) {

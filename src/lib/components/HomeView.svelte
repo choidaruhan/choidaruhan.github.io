@@ -1,5 +1,9 @@
 <script lang="ts">
-  import { filteredPosts, loading, selectedPost } from "@/lib/stores/posts.store";
+  import {
+    filteredPosts,
+    loading,
+    selectedPost,
+  } from "@/lib/stores/posts.store";
   import { formatPostDate } from "@/lib/utils/date";
 
   function selectPost(post: any) {
@@ -20,7 +24,7 @@
   {:else}
     <div class="posts-grid">
       {#each $filteredPosts as post (post.id)}
-        <button 
+        <button
           class="post-card"
           on:click={() => selectPost(post)}
           type="button"
@@ -28,7 +32,7 @@
           <h2 class="post-title">{post.title}</h2>
           <time class="post-date">{formatPostDate(post)}</time>
           <p class="post-preview">
-            {(post.content || post.body || '').slice(0, 150)}...
+            {(post.content || "").slice(0, 150)}...
           </p>
         </button>
       {/each}
@@ -59,7 +63,8 @@
     margin: 0;
   }
 
-  .loading, .no-posts {
+  .loading,
+  .no-posts {
     text-align: center;
     color: #888;
     padding: 40px;
@@ -76,7 +81,9 @@
     border-radius: 12px;
     background: #fff;
     cursor: pointer;
-    transition: box-shadow 0.2s, transform 0.2s;
+    transition:
+      box-shadow 0.2s,
+      transform 0.2s;
     text-align: left;
     width: 100%;
     font-family: inherit;
