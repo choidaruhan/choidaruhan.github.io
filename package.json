@@ -9,6 +9,8 @@
     "preview": "vite preview"
   },
   "devDependencies": {
+    "@cloudflare/workers-types": "^4.20260310.1",
+    "@types/node": "^25.4.0",
     "wrangler": "^4.68.1"
   },
   "dependencies": {

@@ -60,14 +60,24 @@ const dummyPosts: Post[] = [
 export async function fetchPosts() {
   loading.set(true);
   error.set(null);
-  
+
   try {
-    const res = await fetch(`${API_BASE}/api/posts`);
+    const url = `${API_BASE}/api/posts`;
+    console.log('Fetching posts from:', url);
+    const res = await fetch(url);
+    console.log('Response status:', res.status, res.ok);
     if (!res.ok) throw new Error('Failed to load posts');
-    const data = await res.json();
+    const data = await res.json() as Post[];
+    console.log('Received posts:', data.length);
     posts.set(sortPosts(data));
   } catch (err) {
-    posts.set(sortPosts(dummyPosts));
+    console.error('Failed to fetch posts:', err);
+    error.set(err instanceof Error ? err.message : 'Unknown error');
+    // 로컬 개발 환경에서만 더미 데이터 사용
+    if (window.location.hostname === "localhost") {
+      console.warn('Using dummy data for local development');
+      posts.set(sortPosts(dummyPosts));
+    }
   } finally {
     loading.set(false);
   }
@@ -85,17 +95,26 @@ export async function searchPosts(query: string) {
   loading.set(true);
   
   try {
-    const res = await fetch(`${API_BASE}/api/posts?q=${encodeURIComponent(query)}`);
+    const url = `${API_BASE}/api/posts?q=${encodeURIComponent(query)}`;
+    console.log('Searching posts:', url);
+    const res = await fetch(url);
+    console.log('Search response status:', res.status, res.ok);
     if (!res.ok) throw new Error('Search failed');
-    const data = await res.json();
+    const data = await res.json() as Post[];
+    console.log('Search results:', data.length);
     posts.set(sortPosts(data));
   } catch (err) {
-    // 로컬에서 필터링
-    const q = query.toLowerCase();
-    const filtered = dummyPosts.filter(
-      (p) => p.title.toLowerCase().includes(q) || p.content.toLowerCase().includes(q)
-    );
-    posts.set(sortPosts(filtered));
+    console.error('Search failed:', err);
+    error.set(err instanceof Error ? err.message : 'Unknown error');
+    // 로컬 개발 환경에서만 더미 데이터 사용
+    if (window.location.hostname === "localhost") {
+      console.warn('Using dummy data for local development');
+      const q = query.toLowerCase();
+      const filtered = dummyPosts.filter(
+        (p) => p.title.toLowerCase().includes(q) || p.content.toLowerCase().includes(q)
+      );
+      posts.set(sortPosts(filtered));
+    }
   } finally {
     loading.set(false);
   }

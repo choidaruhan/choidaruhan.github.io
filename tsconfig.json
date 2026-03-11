@@ -17,6 +17,7 @@
     "checkJs": false,
     "useDefineForClassFields": true,
     "baseUrl": ".",
+    "types": ["node", "@cloudflare/workers-types"],
     "paths": {
       "@/*": ["src/*"],
       "$lib": ["src/lib"],

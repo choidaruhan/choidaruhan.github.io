@@ -18,15 +18,16 @@ interface Post {
 // 허용할 오리진
 const ALLOWED_ORIGINS = [
   "http://localhost:5173",
-  "http://localhost:5174",
   "http://localhost:8787",
+  "https://choidaruhan.github.io",
 ];
 
 function getCorsHeaders(origin: string | null): Record<string, string> {
-  const allowedOrigin = origin && ALLOWED_ORIGINS.includes(origin) 
-    ? origin 
+  console.log('CORS origin:', origin, 'allowed origins:', ALLOWED_ORIGINS);
+  const allowedOrigin = origin && ALLOWED_ORIGINS.includes(origin)
+    ? origin
     : ALLOWED_ORIGINS[0] || "*";
-  
+  console.log('Selected allowed origin:', allowedOrigin);
   return {
     "Access-Control-Allow-Origin": allowedOrigin,
     "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
@@ -50,7 +51,7 @@ export default {
       // GET /api/posts - 모든 포스트 가져오기
       if (path === "/api/posts" && request.method === "GET") {
         const searchQuery = url.searchParams.get("q");
-        
+
         if (searchQuery) {
           // 검색 기능
           const { results } = await env.DB.prepare(
@@ -60,11 +61,11 @@ export default {
             headers: { "Content-Type": "application/json", ...corsHeaders },
           });
         }
-        
+
         const { results } = await env.DB.prepare(
           "SELECT * FROM posts ORDER BY created_at DESC"
         ).all<Post>();
-        
+
         return new Response(JSON.stringify(results), {
           headers: { "Content-Type": "application/json", ...corsHeaders },
         });
@@ -77,14 +78,14 @@ export default {
         const { results } = await env.DB.prepare(
           "SELECT * FROM posts WHERE id = ?"
         ).bind(postId).all<Post>();
-        
+
         if (results.length === 0) {
           return new Response(JSON.stringify({ error: "Post not found" }), {
             status: 404,
             headers: { "Content-Type": "application/json", ...corsHeaders },
           });
         }
-        
+
         return new Response(JSON.stringify(results[0]), {
           headers: { "Content-Type": "application/json", ...corsHeaders },
         });
