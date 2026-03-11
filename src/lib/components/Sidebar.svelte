@@ -37,13 +37,9 @@
 
   onMount(async () => {
     try {
-      const token = localStorage.getItem("blog_auth_token");
-      const headers: Record<string, string> = {};
-      if (token) {
-        headers["Cf-Access-Jwt-Assertion"] = token;
-      }
-
-      const res = await fetch(`${API_BASE}/auth/me`, { headers });
+      const res = await fetch(`${API_BASE}/auth/me`, {
+        credentials: "include",
+      });
       if (res.ok) {
         const data = (await res.json()) as {
           user: { email: string; name?: string };
@@ -60,7 +56,6 @@
   });
 
   function logout() {
-    localStorage.removeItem("blog_auth_token");
     const redirectTo = encodeURIComponent(window.location.origin);
     window.location.href = `${API_BASE}/auth/logout?redirect_to=${redirectTo}`;
   }

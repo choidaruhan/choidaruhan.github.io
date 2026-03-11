@@ -52,8 +52,9 @@ function getCorsHeaders(origin: string | null): Record<string, string> {
   return {
     "Access-Control-Allow-Origin": allowedOrigin,
     "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-    "Access-Control-Allow-Headers":
-      "Content-Type, Authorization, Cf-Access-Jwt-Assertion",
+    "Access-Control-Allow-Headers": "Content-Type, Authorization",
+    "Access-Control-Allow-Credentials": "true",
+    Vary: "Origin",
   };
 }
 
@@ -179,25 +180,12 @@ export default {
           });
         }
 
-        // 토큰이 있으면 frontend로 auth_token 쿼리를 붙여 리다이렉트
-        let finalRedirect = redirectTo;
-        try {
-          const redirectUrl = new URL(redirectTo);
-          redirectUrl.searchParams.set("auth_token", token);
-          finalRedirect = redirectUrl.toString();
-        } catch (e) {
-          // redirect_to가 절대 URL이 아닌 경우 대비
-          finalRedirect =
-            redirectTo +
-            (redirectTo.includes("?") ? "&" : "?") +
-            "auth_token=" +
-            token;
-        }
-
+        // Access 세션 쿠키 기반 인증을 사용하므로 토큰을 프론트엔드 URL에 전달하지 않고
+        // 원래 목적지로만 리다이렉트합니다.
         return new Response(null, {
           status: 302,
           headers: {
-            Location: finalRedirect,
+            Location: redirectTo,
             ...corsHeaders,
           },
         });

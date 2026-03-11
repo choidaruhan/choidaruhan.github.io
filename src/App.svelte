@@ -6,17 +6,6 @@
   import Admin from "./lib/components/Admin.svelte";
   import { fetchPosts, selectedPost } from "./lib/stores/posts.store";
 
-  // 서드파티 쿠키 차단 우회: URL을 통한 토큰 전달 핸들링 (자식 컴포넌트 onMount 전에 실행되도록 최상단에 배치)
-  if (typeof window !== 'undefined') {
-    const url = new URL(window.location.href);
-    const authToken = url.searchParams.get('auth_token');
-    if (authToken) {
-      localStorage.setItem('blog_auth_token', authToken);
-      url.searchParams.delete('auth_token');
-      window.history.replaceState({}, '', url.toString());
-    }
-  }
-
   let loading = true;
   let error = "";
   let currentRoute = "/";
@@ -30,7 +19,7 @@
   }
 
   onMount(async () => {
-    window.addEventListener('popstate', handleRouteChange);
+    window.addEventListener("popstate", handleRouteChange);
     handleRouteChange();
 
     // Load posts only if not on admin page
@@ -48,7 +37,7 @@
   });
 
   onDestroy(() => {
-    window.removeEventListener('popstate', handleRouteChange);
+    window.removeEventListener("popstate", handleRouteChange);
   });
 </script>
 
@@ -59,7 +48,7 @@
 
 <div class="app-container">
   <Sidebar />
-  
+
   <main class="main-content">
     {#if loading}
       <div class="loading">
@@ -83,7 +72,8 @@
   :global(body) {
     margin: 0;
     padding: 0;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-family:
+      -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     background: #f5f5f5;
     color: #333;
   }
@@ -99,7 +89,8 @@
     background: #fff;
   }
 
-  .loading, .error {
+  .loading,
+  .error {
     display: flex;
     align-items: center;
     justify-content: center;
