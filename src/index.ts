@@ -8,6 +8,7 @@ export interface Env {
   DB: D1Database;
   ALLOW_LOCAL_AUTH?: string;
   ACCESS_TEAM_DOMAIN?: string;
+  FRONTEND_URL?: string;
 }
 
 interface Post {
@@ -20,24 +21,15 @@ interface Post {
 }
 
 // Import jose for JWT verification
-import { jwtVerify } from 'jose';
+import { jwtVerify, createRemoteJWKSet } from 'jose';
 
 // JWKS caching
-let jwksCache: jose.JWKSet | null = null;
-let jwksCacheTime = 0;
-const JWKS_CACHE_TTL = 10 * 60 * 1000; // 10 minutes
+let jwksCache: ReturnType<typeof createRemoteJWKSet> | null = null;
 
-async function getJwks(teamDomain: string): Promise<jose.JWKSet> {
-  const now = Date.now();
-  if (jwksCache && (now - jwksCacheTime) < JWKS_CACHE_TTL) {
-    return jwksCache;
+function getJwks(teamDomain: string) {
+  if (!jwksCache) {
+    jwksCache = createRemoteJWKSet(new URL(`https://${teamDomain}/cdn-cgi/access/certs`));
   }
-  const res = await fetch(`https://${teamDomain}/cdn-cgi/access/certs`);
-  if (!res.ok) {
-    throw new Error(`Failed to fetch JWKS: ${res.status}`);
-  }
-  jwksCache = await res.json() as jose.JWKSet;
-  jwksCacheTime = now;
   return jwksCache;
 }
 
@@ -57,7 +49,7 @@ function getCorsHeaders(origin: string | null): Record<string, string> {
   return {
     "Access-Control-Allow-Origin": allowedOrigin,
     "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type, Authorization",
+    "Access-Control-Allow-Headers": "Content-Type, Authorization, Cf-Access-Jwt-Assertion",
   };
 }
 
@@ -74,7 +66,7 @@ async function checkAuth(request: Request, env: Env): Promise<boolean> {
 
   const teamDomain = env.ACCESS_TEAM_DOMAIN || 'choidaruhan.cloudflareaccess.com';
   try {
-    const jwks = await getJwks(teamDomain);
+    const jwks = getJwks(teamDomain);
     await jwtVerify(token, jwks, {
       issuer: `https://${teamDomain}`,
       audience: `https://${teamDomain}`
@@ -118,7 +110,7 @@ export default {
 
         const teamDomain = env.ACCESS_TEAM_DOMAIN || 'choidaruhan.cloudflareaccess.com';
         try {
-          const jwks = await getJwks(teamDomain);
+          const jwks = getJwks(teamDomain);
           const { payload } = await jwtVerify(token, jwks, {
             issuer: `https://${teamDomain}`,
             audience: `https://${teamDomain}`
@@ -144,10 +136,23 @@ export default {
       // GET /auth/login - Redirect to frontend after Access authentication
       if (path === "/auth/login") {
         const redirectTo = url.searchParams.get("redirect_to") || env.FRONTEND_URL || "/";
+        const token = request.headers.get("Cf-Access-Jwt-Assertion");
+        
+        let finalRedirect = redirectTo;
+        if (token) {
+          try {
+            const redirectUrl = new URL(redirectTo);
+            redirectUrl.searchParams.set('auth_token', token);
+            finalRedirect = redirectUrl.toString();
+          } catch (e) {
+            finalRedirect = redirectTo + (redirectTo.includes('?') ? '&' : '?') + 'auth_token=' + token;
+          }
+        }
+        
         return new Response(null, {
           status: 302,
           headers: {
-            "Location": redirectTo,
+            "Location": finalRedirect,
             ...corsHeaders
           }
         });

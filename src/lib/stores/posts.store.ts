@@ -1,4 +1,5 @@
 import { writable, derived } from 'svelte/store';
+import { defaultBlogApi } from "@/lib/api/blogApi";
 import type { Post } from "@/lib/api/blogApi";
 
 // 환경에 따라 다른 API URL 사용
@@ -68,12 +69,8 @@ export async function fetchPosts() {
   error.set(null);
 
   try {
-    const url = `${API_BASE}/api/posts`;
-    console.log('Fetching posts from:', url);
-    const res = await fetch(url);
-    console.log('Response status:', res.status, res.ok);
-    if (!res.ok) throw new Error('Failed to load posts');
-    const data = await res.json() as Post[];
+    console.log('Fetching posts via BlogApiClient');
+    const data = await defaultBlogApi.fetchPosts();
     console.log('Received posts:', data.length);
     posts.set(sortPosts(data));
   } catch (err) {
@@ -101,12 +98,8 @@ export async function searchPosts(query: string) {
   loading.set(true);
   
   try {
-    const url = `${API_BASE}/api/posts?q=${encodeURIComponent(query)}`;
-    console.log('Searching posts:', url);
-    const res = await fetch(url);
-    console.log('Search response status:', res.status, res.ok);
-    if (!res.ok) throw new Error('Search failed');
-    const data = await res.json() as Post[];
+    console.log('Searching posts via BlogApiClient');
+    const data = await defaultBlogApi.searchPosts(query);
     console.log('Search results:', data.length);
     posts.set(sortPosts(data));
   } catch (err) {
