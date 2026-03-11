@@ -25,6 +25,12 @@
     window.location.href = '/admin';
   }
 
+  function login() {
+    const teamDomain = 'choidaruhan.cloudflareaccess.com';
+    const redirectTo = encodeURIComponent('https://choidaruhan.github.io/admin');
+    window.location.href = `https://${teamDomain}/cdn-cgi/access/login?redirect_to=${redirectTo}`;
+  }
+
   onMount(async () => {
     try {
       const res = await fetch(`${API_BASE}/auth/me`);
@@ -64,9 +70,9 @@
           </button>
         </div>
       {:else}
-        <p class="login-hint">
-          글쓰기는 Cloudflare Access로 보호되어 있습니다.
-        </p>
+        <button class="login-btn" on:click={login}>
+          🔐 Cloudflare Access 로그인
+        </button>
       {/if}
     </div>
   </div>
@@ -177,6 +183,28 @@
 
   .logout-btn:hover {
     background: rgba(255, 255, 255, 0.2);
+  }
+
+  .login-btn {
+    width: 100%;
+    padding: 8px 12px;
+    border: none;
+    border-radius: 6px;
+    background: rgba(99, 102, 241, 0.2);
+    color: #a5b4fc;
+    cursor: pointer;
+    font-size: 0.85rem;
+    transition: background 0.2s;
+    text-align: left;
+    font-family: inherit;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .login-btn:hover {
+    background: rgba(99, 102, 241, 0.4);
+    color: #fff;
   }
 
   .search-container {

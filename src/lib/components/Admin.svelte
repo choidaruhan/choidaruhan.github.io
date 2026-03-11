@@ -112,6 +112,12 @@
     }
   }
 
+  function login() {
+    const teamDomain = 'choidaruhan.cloudflareaccess.com';
+    const redirectTo = encodeURIComponent('https://choidaruhan.github.io/admin');
+    window.location.href = `https://${teamDomain}/cdn-cgi/access/login?redirect_to=${redirectTo}`;
+  }
+
   function logout() {
     // Cloudflare Access logout
     const redirectTo = encodeURIComponent('https://choidaruhan.github.io');
@@ -139,7 +145,7 @@
         이 사이트는 Cloudflare Access로 보호되어 있습니다.<br>
         관리자에게 접근 권한을 요청하세요.
       </p>
-      <button on:click={logout} class="login-btn">Cloudflare Access 로그인</button>
+      <button on:click={login} class="login-btn">Cloudflare Access 로그인</button>
     </div>
   {:else}
     <!-- The form is only visible when authenticated -->
