@@ -1,4 +1,5 @@
-import { getFetchOptions, DEFAULT_API_BASE } from "./apiClientOptions";
+import { getFetchOptions } from "./getFetchOptions";
+import { DEFAULT_API_BASE } from "../../constants/DEFAULT_API_BASE";
 
 export async function deletePost(id: number, apiBase: string = DEFAULT_API_BASE): Promise<void> {
   const res = await fetch(`${apiBase}/posts/${id}`, {

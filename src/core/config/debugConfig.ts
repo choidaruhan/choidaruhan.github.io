@@ -1,9 +1,9 @@
-import { API_BASE } from "./apiBase";
+import { API_BASE } from "../constants/API_BASE";
 import { isLocalDevelopment } from "./isLocalDevelopment";
 import { isTunnelEnvironment } from "./isTunnelEnvironment";
 import { isProduction } from "./isProduction";
-import { AUTH_ENDPOINTS } from "./authEndpoints";
-import { API_ENDPOINTS } from "./apiEndpoints";
+import { AUTH_ENDPOINTS } from "../constants/AUTH_ENDPOINTS";
+import { API_ENDPOINTS } from "../constants/API_ENDPOINTS";
 import { getFrontendUrl } from "./getFrontendUrl";
 
 export const debugConfig = () => {

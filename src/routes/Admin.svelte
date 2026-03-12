@@ -1,10 +1,10 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { fetchPost } from "@/lib/api/client/fetchPost";
-  import { createPost } from "@/lib/api/client/createPost";
-  import { updatePost } from "@/lib/api/client/updatePost";
-  import { API_BASE } from "@/lib/config/apiBase";
-  import type { Post } from "@/lib/types/Post";
+  import { fetchPost } from "@/core/api/client/fetchPost";
+  import { createPost } from "@/core/api/client/createPost";
+  import { updatePost } from "@/core/api/client/updatePost";
+  import { API_BASE } from "@/core/config/apiBase";
+  import type { Post } from "@/core/types/Post";
 
   let title = "";
   let content = "";

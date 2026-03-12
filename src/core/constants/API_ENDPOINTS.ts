@@ -1,4 +1,4 @@
-import { API_BASE } from "./apiBase";
+import { API_BASE } from "./API_BASE";
 
 export const API_ENDPOINTS = {
   posts: `${API_BASE}/api/posts`,

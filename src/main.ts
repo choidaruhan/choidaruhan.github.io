@@ -5,7 +5,7 @@
  */
 
 import "./app.css";
-import { mountApp } from "./lib/app/mountApp";
+import { mountApp } from "./core/app/mountApp";
 
 const app = mountApp();
 

@@ -1,6 +1,6 @@
 import type { Post } from "../types/Post";
 
-export const dummyPosts: Post[] = [
+export const DUMMY_POSTS: Post[] = [
   {
     id: 1,
     title: "첫 번째 블로그 글",

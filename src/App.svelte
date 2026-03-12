@@ -1,13 +1,13 @@
 <script lang="ts">
   import { onMount, onDestroy } from "svelte";
-  import Sidebar from "./lib/components/Sidebar.svelte";
-  import Home from "./lib/routes/Home.svelte";
-  import Post from "./lib/routes/Post.svelte";
-  import Admin from "./lib/routes/Admin.svelte";
-  import Loading from "./lib/components/Loading.svelte";
-  import Error from "./lib/components/Error.svelte";
-  import { fetchPosts } from "./lib/stores/fetchPosts";
-  import { selectedPost } from "./lib/stores/selectedPost";
+  import Sidebar from "./components/Sidebar.svelte";
+  import Home from "./routes/Home.svelte";
+  import Post from "./routes/Post.svelte";
+  import Admin from "./routes/Admin.svelte";
+  import Loading from "./components/Loading.svelte";
+  import Error from "./components/Error.svelte";
+  import { getFetchPosts } from "./core/stores/getFetchPosts";
+  import { selectedPost } from "./core/stores/selectedPost";
 
   import type { ComponentType } from "svelte";
 
@@ -28,7 +28,7 @@
 
     if (currentRoute === "/" || currentRoute.startsWith("/posts")) {
       try {
-        await fetchPosts();
+        await getFetchPosts();
       } catch (e) {
         error = "블로그를 불러오는데 실패했습니다.";
       } finally {

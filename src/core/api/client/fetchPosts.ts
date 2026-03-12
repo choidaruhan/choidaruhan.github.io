@@ -1,4 +1,5 @@
-import { getFetchOptions, DEFAULT_API_BASE } from "./apiClientOptions";
+import { getFetchOptions } from "./getFetchOptions";
+import { DEFAULT_API_BASE } from "../../constants/DEFAULT_API_BASE";
 import type { Post } from "../../types/Post";
 
 export async function fetchPosts(apiBase: string = DEFAULT_API_BASE): Promise<Post[]> {

@@ -1,4 +1,4 @@
-import { API_BASE } from "./apiBase";
+import { API_BASE } from "./API_BASE";
 
 export const AUTH_ENDPOINTS = {
   login: `${API_BASE}/auth/login`,

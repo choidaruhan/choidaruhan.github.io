@@ -4,14 +4,14 @@ import { error } from "./error";
 import { searchQuery } from "./searchQuery";
 import { searchPosts as apiSearchPosts } from "../api/client/searchPosts";
 import { sortPostsByDate } from "../utils/sortPostsByDate";
-import { fetchPosts } from "./fetchPosts";
-import { dummyPosts } from "./dummyPosts";
+import { getFetchPosts } from "./getFetchPosts";
+import { DUMMY_POSTS } from "../constants/DUMMY_POSTS";
 
-export async function searchPosts(query: string) {
+export async function getSearchPosts(query: string) {
   searchQuery.set(query);
   
   if (!query.trim()) {
-    await fetchPosts();
+    await getFetchPosts();
     return;
   }
   
@@ -29,7 +29,7 @@ export async function searchPosts(query: string) {
     if (window.location.hostname === "localhost") {
       console.warn('Using dummy data for local development');
       const q = query.toLowerCase();
-      const filtered = dummyPosts.filter(
+      const filtered = DUMMY_POSTS.filter(
         (p) => p.title.toLowerCase().includes(q) || p.content.toLowerCase().includes(q)
       );
       posts.set(sortPostsByDate(filtered));

@@ -1,7 +1,7 @@
 <script lang="ts">
-  import { selectedPost } from "@/lib/stores/selectedPost";
-  import { renderMarkdown } from "@/lib/utils/renderMarkdown";
-  import { formatPostDate } from "@/lib/utils/formatPostDate";
+  import { selectedPost } from "@/core/stores/selectedPost";
+  import { renderMarkdown } from "@/core/utils/renderMarkdown";
+  import { formatPostDate } from "@/core/utils/formatPostDate";
 
   $: displayedPost = $selectedPost;
 </script>
