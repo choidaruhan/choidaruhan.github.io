@@ -1,5 +1,5 @@
 name = "my-blog-worker"
-main = "src/lib/api/fetch.ts"
+main = "src/core/infra/api/fetch.ts"
 compatibility_date = "2024-02-26"
 
 [vars]

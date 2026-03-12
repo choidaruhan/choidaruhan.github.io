@@ -6,8 +6,8 @@
   import Admin from "./routes/Admin.svelte";
   import Loading from "./components/Loading.svelte";
   import Error from "./components/Error.svelte";
-  import { getFetchPosts } from "./core/stores/getFetchPosts";
-  import { selectedPost } from "./core/stores/selectedPost";
+  import { getFetchPosts } from "./core/app/states/getFetchPosts";
+  import { selectedPost } from "./core/app/states/selectedPost";
 
   import type { ComponentType } from "svelte";
 

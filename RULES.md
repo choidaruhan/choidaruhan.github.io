@@ -12,31 +12,40 @@ This document defines the core principles and coding standards for this project 
     - `main.ts`, `App.svelte`, `app.css`: Application entry points.
     - `routes/`: Page-level components/layouts (if applicable).
     - `components/`: UI components.
-    - `core/`: All shared logic and data (State, API, Types, etc.).
-      - `stores/`: Application state management.
-      - `api/`: API integration.
-      - `types/`: TypeScript definitions.
-      - `constants/`: Fixed global values.
-      - `config/`: Environment and runtime configuration.
+    - `core/`: All shared logic and data.
+      - `domain/`: Business logic grouped by domain (e.g., `posts`, `auth`).
+      - `infra/`: Technical implementations (API integration, Routing).
+      - `app/`: Application-level concerns.
+        - `states/`: Application state management.
+        - `constants/`: Global fixed values.
+        - `config/`: Environment configuration.
+        - `boot/`: App initialization and mounting.
+      - `shared/`: Generic helpers and definitions.
+        - `utils/`: Common utility functions.
+        - `types/`: Shared TypeScript definitions.
 
 ## 2. Variable & Constant Organization
 
 ### 2.1 Global Constants
-- **Path**: `src/core/constants/`
+
+- **Path**: `src/core/app/constants/`
 - **Naming**: `UPPER_SNAKE_CASE.ts` matching the export name.
 - **Example**: `API_BASE.ts` -> `export const API_BASE = ...`
 
-### 2.2 Global Reactive State (Stores)
-- **Path**: `src/core/stores/`
+### 2.2 Global Reactive States
+
+- **Path**: `src/core/app/states/`
 - **Naming**: `camelCase.ts` matching the export name.
 - **Example**: `posts.ts` -> `export const posts = writable([])`
 
 ### 2.3 Configuration & Environment
-- **Path**: `src/core/config/`
+
+- **Path**: `src/core/app/config/`
 - **Naming**: `camelCase.ts` matching the export name or a descriptive name.
 - **Example**: `isProduction.ts` -> `export const isProduction = ...`
 
 ### 2.4 Local Variables
+
 - Variables that are only used within a single function should remain inside that function's file.
 - If a local variable becomes shared or grows too complex, move it to `constants` or `config`.
 
