@@ -2,15 +2,11 @@
  * my-blog/src/main.ts
  *
  * Svelte application entry point.
- * - Mounts `App.svelte` into the page element with id="app"
  */
 
-import { mount } from "svelte";
-import App from "./App.svelte";
 import "./app.css";
+import { mountApp } from "./lib/app/mountApp";
 
-const app = mount(App, {
-  target: document.getElementById("app") ?? document.body,
-});
+const app = mountApp();
 
 export default app;

@@ -1,0 +1,28 @@
+import type { Env } from "../../types/Env";
+import { jsonResponse } from "../../utils/jsonResponse";
+import { dispatchAuthRequest } from "./dispatchAuthRequest";
+import { dispatchPostRequest } from "./dispatchPostRequest";
+
+export async function routeRequest(
+  request: Request,
+  env: Env,
+  url: URL,
+  corsHeaders: Record<string, string>
+): Promise<Response> {
+  const path = url.pathname;
+
+  // Auth Routes
+  const authResponse = await dispatchAuthRequest(path, request, env, url, corsHeaders);
+  if (authResponse) return authResponse;
+
+  // Post Routes
+  const postResponse = await dispatchPostRequest(path, request, env, url, corsHeaders);
+  if (postResponse) return postResponse;
+
+  // Health Check
+  if (path === "/health" && request.method === "GET") {
+    return jsonResponse({ status: "ok", timestamp: new Date().toISOString() }, 200, corsHeaders);
+  }
+
+  return jsonResponse({ error: "Not found" }, 404, corsHeaders);
+}
