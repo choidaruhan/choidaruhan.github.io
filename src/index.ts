@@ -240,14 +240,9 @@ export default {
       if (path === "/auth/logout" && request.method === "GET") {
         const redirectTo =
           url.searchParams.get("redirect_to") || env.FRONTEND_URL || "/";
-        const origin = request.headers.get("Origin");
 
         // 로컬 개발 환경 우회
-        if (
-          env.ALLOW_LOCAL_AUTH === "true" &&
-          origin &&
-          origin.includes("localhost")
-        ) {
+        if (env.ALLOW_LOCAL_AUTH === "true") {
           return new Response(null, {
             status: 302,
             headers: {
