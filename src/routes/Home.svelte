@@ -1,8 +1,8 @@
 <script lang="ts">
-  import { filteredPosts } from "@/core/stores/filteredPosts";
-  import { loading } from "@/core/stores/loading";
-  import { selectedPost } from "@/core/stores/selectedPost";
-  import { formatPostDate } from "@/core/utils/formatPostDate";
+  import { filteredPosts } from "@/core/app/states/filteredPosts";
+  import { loading } from "@/core/app/states/loading";
+  import { selectedPost } from "@/core/app/states/selectedPost";
+  import { formatPostDate } from "@/core/shared/utils/formatPostDate";
 
   function selectPost(post: any) {
     selectedPost.set(post);

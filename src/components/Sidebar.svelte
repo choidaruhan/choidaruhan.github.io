@@ -1,12 +1,12 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { filteredPosts } from "@/core/stores/filteredPosts";
-  import { loading } from "@/core/stores/loading";
-  import { selectedPost } from "@/core/stores/selectedPost";
-  import { getSearchPosts } from "@/core/stores/getSearchPosts";
-  import { getFetchPosts } from "@/core/stores/getFetchPosts";
-  import { formatPostDate } from "@/core/utils/formatPostDate";
-  import { API_BASE } from "@/core/constants/API_BASE";
+  import { filteredPosts } from "@/core/app/states/filteredPosts";
+  import { loading } from "@/core/app/states/loading";
+  import { selectedPost } from "@/core/app/states/selectedPost";
+  import { getSearchPosts } from "@/core/app/states/getSearchPosts";
+  import { getFetchPosts } from "@/core/app/states/getFetchPosts";
+  import { formatPostDate } from "@/core/shared/utils/formatPostDate";
+  import { API_BASE } from "@/core/app/constants/API_BASE";
 
   let searchQuery = "";
   let searchTimeout: ReturnType<typeof setTimeout>;
