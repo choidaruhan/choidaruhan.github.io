@@ -9,14 +9,18 @@ This document defines the core principles and coding standards for this project 
   - Example: `getFetchPosts.ts` exports `getFetchPosts`.
 - **Location**:
   - `src/`: Root source directory.
-    - `main.ts`, `App.svelte`, `app.css`: Application entry points.
-    - `routes/`: Page-level components/layouts (if applicable).
-    - `components/`: UI components.
-    - `core/`: All shared logic and data.
+    - `app.css`: Global styles.
+    - `routes/`: SvelteKit file-based routing.
+      - `+layout.svelte`: Global layout and shared UI elements.
+      - `+page.svelte`: Route-specific components.
+      - `+page.server.ts`: Server-side data loading (calling `core/infra`).
+    - `lib/`: SvelteKit's library directory (accessible via `$lib`).
+      - `components/`: UI components.
+    - `core/`: All shared logic and data (DDD Layer).
       - `domain/`: Business logic grouped by domain (e.g., `posts`, `auth`).
       - `infra/`: Technical implementations (API integration, Routing).
       - `app/`: Application-level concerns.
-        - `states/`: Application state management.
+        - `states/`: Application state management (Svelte 5 Runes).
         - `constants/`: Global fixed values.
         - `config/`: Environment configuration.
         - `boot/`: App initialization and mounting.
@@ -24,7 +28,22 @@ This document defines the core principles and coding standards for this project 
         - `utils/`: Common utility functions.
         - `types/`: Shared TypeScript definitions.
 
-## 2. Variable & Constant Organization
+---
+
+## 2. SvelteKit & DDD Harmony
+
+To maintain the architectural integrity while using SvelteKit:
+
+- **Framework Independence**: The `core/` directory must remain framework-agnostic. It should not directly use SvelteKit-specific APIs (like `page` store) unless absolutely necessary.
+- **Data Flow**:
+  1. `+page.server.ts` calls `core/infra` to fetch data.
+  2. Data is passed to `+page.svelte` via the `data` prop.
+  3. UI interactions trigger functions in `core/app` or `core/domain`.
+- **State Management**: Use Svelte 5 Runes (`$state`, `$derived`) in `core/app/states` for reactive global state that transcends page navigation.
+
+---
+
+## 3. Variable & Constant Organization
 
 ### 2.1 Global Constants
 

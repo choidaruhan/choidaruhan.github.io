@@ -17,7 +17,7 @@ if [ -f "$FRONTEND_PID" ] && ps -p $(cat "$FRONTEND_PID") > /dev/null 2>&1; then
 else
     log_info "Starting frontend (port $FRONTEND_PORT)..."
     (bun run dev > frontend.log 2>&1 & echo $! > "$FRONTEND_PID")
-    log_success "Frontend started (PID: $(cat "$FRONTEND_PID"), Logs: frontend.log)"
+    log_success "Frontend started (SvelteKit, PID: $(cat "$FRONTEND_PID"), Logs: frontend.log)"
 fi
 
 echo ""

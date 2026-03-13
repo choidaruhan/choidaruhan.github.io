@@ -1,9 +1,12 @@
 <script lang="ts">
-  import { selectedPost } from "@/core/app/states/selectedPost";
+  import { posts } from "@/core/app/states/posts";
+  import type { Post } from "@/core/shared/types/Post";
   import { renderMarkdown } from "@/core/domain/posts/renderMarkdown";
   import { formatPostDate } from "@/core/shared/utils/formatPostDate";
+  import { page } from "$app/stores";
 
-  $: displayedPost = $selectedPost;
+  $: slug = $page.params.slug;
+  $: displayedPost = ($posts as Post[]).find((p: Post) => p.slug === slug);
 </script>
 
 {#if displayedPost}
@@ -19,6 +22,6 @@
   </article>
 {:else}
   <div class="no-post">
-    <p>글을 선택해주세요</p>
+    <p>글을 찾을 수 없습니다.</p>
   </div>
 {/if}

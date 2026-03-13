@@ -1,5 +1,6 @@
 <script lang="ts">
   import { filteredPosts } from "@/core/app/states/filteredPosts";
+  import type { Post } from "@/core/shared/types/Post";
   import { loading } from "@/core/app/states/loading";
   import { selectedPost } from "@/core/app/states/selectedPost";
   import { formatPostDate } from "@/core/shared/utils/formatPostDate";
@@ -21,18 +22,17 @@
     <div class="no-posts">아직 작성된 글이 없습니다.</div>
   {:else}
     <div class="posts-grid">
-      {#each $filteredPosts as post (post.id)}
-        <button
+      {#each ($filteredPosts as Post[]) as post (post.id)}
+        <a
           class="post-card"
-          on:click={() => selectPost(post)}
-          type="button"
+          href="/post/{post.slug}"
         >
           <h2 class="post-title">{post.title}</h2>
           <time class="post-date">{formatPostDate(post)}</time>
           <p class="post-preview">
             {(post.content || "").slice(0, 150)}...
           </p>
-        </button>
+        </a>
       {/each}
     </div>
   {/if}
