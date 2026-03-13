@@ -10,9 +10,6 @@
 		"sourceMap": true,
 		"strict": true,
 		"moduleResolution": "bundler",
-		"types": ["@cloudflare/workers-types"],
-		"paths": {
-			"@/*": ["./src/*"]
-		}
+		"types": ["@cloudflare/workers-types"]
 	}
 }
