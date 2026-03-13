@@ -2,6 +2,8 @@
 
 이 문서는 프로젝트의 모든 원자적(Atomic) 문서들에 대한 통합 인덱스입니다. 각 문서는 하나의 명확한 주제만 다룹니다.
 
+- [**DIRECTORY_MAP.md**](DIRECTORY_MAP.md): 프로젝트 전체 구조와 폴더 설명.
+
 ## 🏗️ Architecture (아키텍처)
 - [**TECH_STACK.md**](arch/TECH_STACK.md): 프로젝트 기술 스택.
 - [**DESIGN_PRINCIPLES.md**](arch/DESIGN_PRINCIPLES.md): 설계 원칙 (DDD, Framework Agnostic).
