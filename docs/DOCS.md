@@ -1,42 +1,27 @@
-# Documentation Guide (문서화 가이드)
+# Documentation Index (문서 인덱스)
 
-이 문서는 프로젝트의 지속 가능한 관리와 협업을 위해 마크다운(Markdown) 문서를 작성하고 관리하는 규칙을 정의합니다.
+이 문서는 프로젝트의 모든 원자적(Atomic) 문서들에 대한 통합 인덱스입니다. 각 문서는 하나의 명확한 주제만 다룹니다.
 
-## 1. 문서 저장소 구조
+## 🏗️ Architecture (아키텍처)
+- [**TECH_STACK.md**](arch/TECH_STACK.md): 프로젝트 기술 스택.
+- [**DESIGN_PRINCIPLES.md**](arch/DESIGN_PRINCIPLES.md): 설계 원칙 (DDD, Framework Agnostic).
+- [**LAYER_STRUCTURE.md**](arch/LAYER_STRUCTURE.md): 디렉토리 및 레이어 구조.
 
-모든 기술 명세 및 상세 문서는 `docs/` 폴더 내에 위치하며, 프로젝트 개요는 루트의 `README.md`에서 관리합니다.
+## 📝 Specifications (기술 명세)
+- [**ROUTING.md**](specs/ROUTING.md): 공개/관리자 라우트 정보.
+- [**DATABASE_SCHEMA.md**](specs/DATABASE_SCHEMA.md): D1 데이터베이스 스키마.
+- [**AUTHENTICATION.md**](specs/AUTHENTICATION.md): Cloudflare Access 인증 흐름.
+- [**API_REFERENCE.md**](specs/API_REFERENCE.md): 백엔드 API 엔드포인트.
 
-* `README.md` (Root): 프로젝트 전체 개요, 퀵 스타트.
-* `docs/`: 모든 상세 문서 저장소.
-  * `ARCHITECTURE.md`: 아키텍처 및 기술 스택 명세.
-  * `RULES.md`: 코딩 컨벤션 및 프로젝트 규칙.
-  * `PLAN.md`: (기존 TODO.md) 작업 현황 및 로드맵.
-  * `ISSUES.md`: 미해결 과제 및 알려진 이슈 추적.
-  * `SPECS.md`: [NEW] 이미 구현된 기능의 상세 기술 명세.
-  * `DOCS.md`: (본 문서) 문서화 규칙.
+## 📏 Rules (규칙)
+- [**FILE_NAMING.md**](rules/FILE_NAMING.md): 파일명 및 함수 명명 규칙.
+- [**CODING_CONVENTIONS.md**](rules/CODING_CONVENTIONS.md): 변수 조직화 및 데이터 흐름.
+- [**SVELTE_GUIDE.md**](rules/SVELTE_GUIDE.md): Svelte 5 Runes 및 SvelteKit 가이드.
+- [**MARKDOWN_RULES.md**](rules/MARKDOWN_RULES.md): 문서 작성 및 관리 규칙.
 
-## 2. 현재 문서 목록 및 역할
-
-현재 프로젝트에서 관리되고 있는 마크다운 문서들의 역할입니다.
-
-### 📋 기본 및 운영
-
-* **`README.md`**: 프로젝트의 얼굴. 설치, 실행, 기술 스택 요약.
-* **`docs/ARCHITECTURE.md`**: 기술 스택, 폴더 구조, 설계 원칙에 대한 상세 명세.
-* **`docs/rules/RULES.md`**: 코딩 컨벤션 및 프로젝트 규칙.
-* **`docs/rules/SVELTE.md`**: Svelte 및 SvelteKit 사용 가이드 및 각 파일 역할 정의.
-* **`docs/PLAN.md`**: 현재 진행형인 작업 및 단기/장기 로드맵.
-* **`docs/ISSUES.md`**: 현재 해결해야 하는 과제 및 기술적 이슈 목록.
-* **`docs/SPECS.md`**: 이미 구현된 기능들에 대한 상세 기술 명세 및 작동 방식.
-* **`docs/DOCS.md`**: (본 문서) 문서화 규칙 및 관리 가이드.
-
-## 3. 마크다운 작성 규칙
-
-1. **파일명**: 대문자 스네이크 케이스(`UPPER_SNAKE_CASE.md`)를 권장합니다.
-2. **헤더 구조**: 하나의 문서에는 하나의 `<h1>` (#) 헤더만 사용하며, 계층에 따라 `##`, `###`를 순차적으로 사용합니다.
-3. **코드 블록**: 반드시 언어 명시(syntax highlighting)를 포함해야 합니다. (예: \` \` \`typescript)
-4. **언어**: 가급적 한글로 작성하되, 기술 용어는 영어 원문을 병기하거나 원문 그대로 사용합니다.
-5. **동기화**: 코드나 구조가 변경될 경우 반드시 관련 문서를 즉시 업데이트합니다.
+## 🚀 Plan (계획)
+- [**ROADMAP.md**](plan/ROADMAP.md): 개선 작업 및 로드맵.
+- [**ISSUES.md**](plan/ISSUES.md): 현재 진행 중인 이슈 트래커.
 
 ---
 *Last Updated: 2026-03-13*
