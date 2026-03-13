@@ -2,7 +2,7 @@ import { jsonResponse } from "../../shared/utils/jsonResponse";
 import type { Env } from "../../shared/types/Env";
 
 export async function handleLogin(request: Request, env: Env, url: URL, corsHeaders: Record<string, string>): Promise<Response> {
-  const redirectTo = url.searchParams.get("redirect_to") || env.FRONTEND_URL || "/";
+  const redirectTo = url.searchParams.get("redirect_to") || (env.FRONTEND_URL ? `${env.FRONTEND_URL}/write` : "/write");
   const origin = request.headers.get("Origin");
 
   // 로컬 개발 환경 우회
@@ -48,7 +48,7 @@ export async function handleLogin(request: Request, env: Env, url: URL, corsHead
   // 만약 인증 없이 여기까지 도달했다면, 강제로 cdn-cgi/access/login 경로를 타게 하되
   // 호스트명을 포함한 올바른 구조를 사용합니다.
   const hostname = workerUrl.hostname;
-  const accessLoginUrl = `https://${teamDomain}/cdn-cgi/access/login/${hostname}?redirect_url=${encodeURIComponent(request.url)}`;
+  const accessLoginUrl = `https://${teamDomain}/cdn-cgi/access/login?redirect_url=${encodeURIComponent(request.url)}`;
 
   return new Response(null, {
     status: 302,

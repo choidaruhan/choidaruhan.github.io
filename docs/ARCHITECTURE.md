@@ -1,6 +1,6 @@
 # Architecture & Technical Stack (아키텍처 및 기술 스택)
 
-이 문서는 프로젝트의 기술적 토대와 코드 구조, 그리고 설계 원칙을 설명합니다.
+이 문서는 프로젝트의 기술적 토대와 코드 구조, 그리고 설계 원칙을 설명합니다. 각 문서의 역할은 **[DOCS.md](DOCS.md)**에서 확인하실 수 있습니다.
 
 ## 1. 기술 스택 (Technical Stack)
 
@@ -35,6 +35,8 @@
 ### **프레임워크 레이어 (src/routes/ & lib/)**
 
 * **`routes/`**: SvelteKit의 파일 기반 라우팅 시스템입니다.
+  * `login/`: Cloudflare Access 인증 처리 전용 경로.
+  * `write/`: 글 작성 및 관리를 위한 어드민 대시보드.
 * **`lib/components/`**: UI 구성 요소 (재사용 가능한 컴포넌트).
 
 ---

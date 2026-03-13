@@ -29,7 +29,8 @@
         user = data.user;
       } else {
         user = null;
-        error = "글을 작성하려면 Cloudflare Access 인증이 필요합니다.";
+        // Redirect to login page if unauthenticated
+        window.location.href = "/login";
       }
     } catch (e) {
       user = null;
@@ -135,7 +136,7 @@
 
 <div class="admin-container">
   <div class="header">
-    <h1>{editingId ? "✏️ 글 수정" : "📝 새 글 작성"}</h1>
+    <h1>{editingId ? "✏️ 글 수정" : "📝 관리자 대시보드"}</h1>
     {#if user}
       <div class="user-info">
         <span>{user.name || user.email}님 환영합니다</span>
@@ -147,16 +148,7 @@
   {#if checkingAuth}
     <div class="loading">인증 확인 중...</div>
   {:else if !user}
-    <div class="login-prompt">
-      <p>글을 작성하려면 Cloudflare Access 인증이 필요합니다.</p>
-      <p class="hint">
-        이 사이트는 Cloudflare Access로 보호되어 있습니다.<br />
-        관리자에게 접근 권한을 요청하세요.
-      </p>
-      <button on:click={login} class="login-btn"
-        >Cloudflare Access 로그인</button
-      >
-    </div>
+    <div class="loading">인증이 필요합니다. 로그인 페이지로 이동 중...</div>
   {:else}
     <!-- The form is only visible when authenticated -->
   {/if}

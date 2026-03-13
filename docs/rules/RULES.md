@@ -12,12 +12,18 @@
     - `app.css`: 글로벌 스타일.
     - `routes/`: SvelteKit 파일 기반 라우팅.
       - `+layout.svelte`: 공통 레이아웃 및 공유 UI 요소.
-      - `+page.svelte`: 각 페이지별 컴포넌트.
+      - `login/`: 인증 전용 페이지.
+      - `write/`: 글쓰기 및 관리용 대시보드.
+      - `+page.svelte`: 메인 홈 페이지.
       - `+page.server.ts`: 서버 측 데이터 로딩 (`core/infra` 호출).
-    - `specs/`: 프로젝트 상세 명세 및 가이드.
-      - `RULES.md`: (본 문서) 프로젝트 규칙.
-      - `TODO.md`: 작업 현황 및 계획.
-      - `DOCUMENTATION.md`: 문서화 가이드.
+    - `docs/`: 프로젝트 상세 명세 및 가이드.
+      - `rules/`:
+        - `RULES.md`: (본 문서) 프로젝트 규칙.
+        - `SVELTE.md`: Svelte 및 SvelteKit 사용 가이드.
+      - `PLAN.md`: 작업 현황 및 계획.
+      - `ISSUES.md`: 미해결 과제 및 이슈.
+      - `SPECS.md`: 상세 기술 명세.
+      - `DOCS.md`: 문서화 가이드.
       - `ARCHITECTURE.md`: 아키텍처 및 기술 스택 명세.
     - `lib/`: SvelteKit 라이브러리 디렉토리 (`$lib`로 접근 가능).
       - `components/`: UI 재사용 컴포넌트.
