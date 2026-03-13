@@ -14,6 +14,7 @@ const config = {
 			strict: true
 		}),
 		alias: {
+			"@": "./src",
 			$core: './src/core'
 		}
 	}

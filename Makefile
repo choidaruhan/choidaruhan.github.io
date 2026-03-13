@@ -4,7 +4,7 @@
 SHELL := /bin/bash
 SCRIPT_DIR := ./scripts/make
 
-.PHONY: help install run stop build deploy status clean dev
+.PHONY: help install run stop build deploy status clean dev check
 
 # Display help information
 help:
@@ -25,6 +25,10 @@ stop:
 # Build frontend for production
 build:
 	@$(SCRIPT_DIR)/build.sh
+
+# Run error checks (svelte-check)
+check:
+	@$(SCRIPT_DIR)/check.sh
 
 # Deploy to Cloudflare
 deploy:
