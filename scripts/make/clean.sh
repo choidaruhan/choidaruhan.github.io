@@ -7,5 +7,5 @@ log_info "Cleaning up..."
 "$(dirname "$0")/stop.sh"
 
 log_info "Removing build artifacts and logs..."
-rm -rf docs .pids *.log
+rm -rf dist .pids *.log
 log_success "Clean complete."

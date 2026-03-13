@@ -3,5 +3,9 @@
 source "$(dirname "$0")/common.sh"
 
 log_info "Building frontend for production (SvelteKit)..."
-bun run build
-log_success "Build complete: docs/"
+if bun run build; then
+    log_success "Build complete: dist/"
+else
+    log_error "Build failed."
+    exit 1
+fi
