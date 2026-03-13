@@ -3,18 +3,20 @@
   import { fetchPost } from "@/core/infra/api/client/fetchPost";
   import { createPost } from "@/core/infra/api/client/createPost";
   import { updatePost } from "@/core/infra/api/client/updatePost";
+  import { generateSlug } from "@/core/domain/posts/generateSlug";
   import { API_BASE } from "@/core/app/constants/API_BASE";
   import type { Post } from "@/core/shared/types/Post";
 
-  let title = "";
-  let content = "";
-  let slug = "";
-  let user: { email: string; name?: string } | null = null;
-  let editingId: number | null = null;
-  let message = "";
-  let error = "";
-  let loading = false;
-  let checkingAuth = true;
+  // Svelte 5 Runes
+  let title = $state("");
+  let content = $state("");
+  let slug = $state("");
+  let user = $state<{ email: string; name?: string } | null>(null);
+  let editingId = $state<number | null>(null);
+  let message = $state("");
+  let error = $state("");
+  let loading = $state(false);
+  let checkingAuth = $state(true);
 
   onMount(async () => {
     // Check authentication via Cloudflare Access
@@ -113,13 +115,9 @@
     }
   }
 
-  function generateSlug() {
+  function handleInputTitle() {
     if (title && !slug) {
-      slug = title
-        .toLowerCase()
-        .replace(/[^a-z0-9가-힣]/g, "-")
-        .replace(/-+/g, "-")
-        .replace(/^-|-$/g, "");
+      slug = generateSlug(title);
     }
   }
 
@@ -140,7 +138,7 @@
     {#if user}
       <div class="user-info">
         <span>{user.name || user.email}님 환영합니다</span>
-        <button on:click={logout} class="logout-btn">로그아웃</button>
+        <button onclick={logout} class="logout-btn">로그아웃</button>
       </div>
     {/if}
   </div>
@@ -165,14 +163,14 @@
   {/if}
 
   {#if user && !checkingAuth}
-    <form on:submit={handleSubmit}>
+    <form onsubmit={handleSubmit}>
       <div class="form-group">
         <label for="title">제목 *</label>
         <input
           id="title"
           bind:value={title}
           required
-          on:input={generateSlug}
+          oninput={handleInputTitle}
           placeholder="글 제목을 입력하세요"
           disabled={loading}
         />
