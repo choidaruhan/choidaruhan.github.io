@@ -2,26 +2,23 @@
 
 이 문서는 프로젝트의 핵심 코딩 원칙인 "함수 하나에 하나의 파일" 규칙을 정의합니다.
 
-## 핵심 원칙
+## 설명
 
-1. **단일 책임 (Single Responsibility)**: 각 소스 코드 파일은 오직 하나의 함수만을 포함해야 합니다.
-2. **명확한 대응 (Explicit Mapping)**: 파일 이름은 반드시 해당 파일 내에 정의된 함수의 이름과 정확히 일치해야 합니다.
+각 소스 코드 파일(TypeScript, JavaScript, Svelte 등)과 마크다운 파일은 다음과 같은 단일 책임 원칙을 준수해야 합니다:
 
-### 예시
+1. **코드 파일**: 하나의 파일에는 오직 하나의 함수(또는 컴포넌트)만 정의되어야 합니다.
+2. **마크다운 파일**: 하나의 파일은 오직 하나의 명확한 주제나 개념만을 다루어야 합니다.
 
-- **함수 이름**: `calculateTotalPrice`
-- **파일명**: `calculateTotalPrice.ts` (또는 `.js`, `.svelte` 등)
+## 예시
+
+### 코드 예시: `calculateTotalPrice.ts`
 
 ```typescript
-// calculateTotalPrice.ts
 export function calculateTotalPrice(items: Item[]) {
   return items.reduce((total, item) => total + item.price, 0);
 }
 ```
 
-## 기대 효과
+### 문서 예시: `MODULAR_ARCHITECTURE.md`
 
-- 코드 가독성 향상
-- 테스트 용이성 (단위 테스트가 파일 단위로 분리됨)
-- 협업 시 충돌(Conflict) 최소화
-- 파일 검색 및 탐색 속도 향상
+- 해당 문서는 '모듈 아키텍처'라는 하나의 대주제만 다루며, 다른 주제는 별도의 문서로 분리합니다.
