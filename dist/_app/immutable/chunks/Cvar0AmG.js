@@ -1,1 +1,0 @@
-import{w as e}from"./-3nFSYNN.js";const o=e([]);function d(t){const a=t.updated_at||t.created_at||t.date||t.published_at;return(a?new Date(a):new Date).toLocaleDateString("ko-KR",{year:"numeric",month:"long",day:"numeric"})}export{d as f,o as p};
