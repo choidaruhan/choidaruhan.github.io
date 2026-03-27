@@ -1,0 +1,37 @@
+[
+  {
+    "id": 1,
+    "title": "JavaScript 비동기 프로그래밍 이해하기",
+    "date": "2026-03-27",
+    "tags": ["JavaScript", "비동기", "프론트엔드"],
+    "content": "JavaScript에서 비동기 프로그래밍은 핵심 개념입니다. Promise와 async/await를 사용하면 콜백 지옥 없이 깔끔한 코드를 작성할 수 있습니다.\n\n## Promise\nPromise는 완료 또는 실패할 수 있는 비동기 작업을 나타냅니다.\n\n## async/await\nasync/await는 Promise를 더 읽기 쉽게 작성할 수 있는 문법 설탕입니다."
+  },
+  {
+    "id": 2,
+    "title": "CSS Grid와 Flexbox 비교",
+    "date": "2026-03-25",
+    "tags": ["CSS", "레이아웃", "프론트엔드"],
+    "content": "CSS Grid와 Flexbox는 각각 다른 레이아웃 문제를 해결합니다.\n\n## Flexbox\n1차원 레이아웃(행 또는 열)에 적합합니다. 내비게이션 바, 카드 내부 정렬 등에 유용합니다.\n\n## CSS Grid\n2차원 레이아웃(행과 열)에 적합합니다. 전체 페이지 레이아웃, 대시보드 등에 유용합니다.\n\n두 도구를 조합하여 사용하는 것이 가장 효과적입니다."
+  },
+  {
+    "id": 3,
+    "title": "Git 브랜치 전략 정리",
+    "date": "2026-03-22",
+    "tags": ["Git", "협업", "도구"],
+    "content": "효율적인 협업을 위한 Git 브랜치 전략을 정리합니다.\n\n## Git Flow\nmain, develop, feature, release, hotfix 브랜치로 구성됩니다. 큰 프로젝트에 적합합니다.\n\n## GitHub Flow\nmain 브랜치와 feature 브랜치만 사용하는 단순한 전략입니다. 지속적 배포에 적합합니다.\n\n## Trunk Based Development\n모든 개발자가 짧은 주기로 메인 브랜치에 직접 커밋하는 방식입니다."
+  },
+  {
+    "id": 4,
+    "title": "웹 성능 최적화 기초",
+    "date": "2026-03-18",
+    "tags": ["성능", "웹", "최적화"],
+    "content": "웹사이트 성능을 향상시키는 기본적인 방법들을 소개합니다.\n\n## 이미지 최적화\nWebP 형식 사용, lazy loading 적용, 적절한 크기 리사이징이 중요합니다.\n\n## 코드 분할\n번들을 작은 청크로 나누어 초기 로딩 시간을 줄일 수 있습니다.\n\n## 캐싱 전략\n브라우저 캐싱과 CDN을 활용하여 반복 요청을 최소화합니다."
+  },
+  {
+    "id": 5,
+    "title": "TypeScript 타입 시스템 활용법",
+    "date": "2026-03-15",
+    "tags": ["TypeScript", "타입", "프론트엔드"],
+    "content": "TypeScript의 강력한 타입 시스템을 효과적으로 활용하는 방법을 설명합니다.\n\n## 제네릭\n재사용 가능한 컴포넌트를 만들 때 타입 안전성을 유지할 수 있습니다.\n\n## 유틸리티 타입\nPartial, Pick, Omit 등 내장 유틸리티 타입을 활용하면 코드 중복을 줄일 수 있습니다.\n\n## 타입 가드\n런타임에 타입을 좁혀서 더 안전한 코드를 작성할 수 있습니다."
+  }
+]

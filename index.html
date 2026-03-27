@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My Memo</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <h1><a href="#" id="logo">My Memo</a></h1>
+    <div class="header-actions">
+      <input type="text" id="search" placeholder="검색..." autocomplete="off">
+      <button id="theme-toggle" aria-label="테마 전환">🌙</button>
+    </div>
+  </header>
+
+  <main>
+    <section id="post-list"></section>
+    <article id="post-detail" class="hidden"></article>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
