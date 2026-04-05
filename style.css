@@ -14,6 +14,10 @@
   --border: #dee2e6;
   --accent: #0d6efd;
   --tag-bg: #e9ecef;
+  --code-bg: #f1f3f5;
+  --code-text: #d63384;
+  --blockquote-border: #adb5bd;
+  --blockquote-bg: #f8f9fa;
 }
 
 [data-theme="dark"] {
@@ -24,14 +28,21 @@
   --border: #2a2a4a;
   --accent: #4da6ff;
   --tag-bg: #2a2a4a;
+  --code-bg: #0f3460;
+  --code-text: #e7a8d0;
+  --blockquote-border: #4a4a6a;
+  --blockquote-bg: #1a1a3e;
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-family:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   background: var(--bg);
   color: var(--text);
   line-height: 1.6;
-  transition: background 0.3s, color 0.3s;
+  transition:
+    background 0.3s,
+    color 0.3s;
   min-height: 100vh;
 }
 
@@ -68,7 +79,9 @@ header h1 a {
   font-size: 0.9rem;
   width: 200px;
   outline: none;
-  transition: border-color 0.2s, width 0.3s;
+  transition:
+    border-color 0.2s,
+    width 0.3s;
 }
 
 #search:focus {
@@ -107,7 +120,9 @@ main {
   padding: 1.5rem;
   margin-bottom: 1rem;
   cursor: pointer;
-  transition: transform 0.2s, box-shadow 0.2s;
+  transition:
+    transform 0.2s,
+    box-shadow 0.2s;
 }
 
 .post-card:hover {
@@ -147,7 +162,7 @@ main {
   color: var(--text-secondary);
   font-size: 0.9rem;
   display: -webkit-box;
-  -webkit-line-clamp: 2;
+  line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
@@ -191,9 +206,122 @@ main {
   gap: 0.75rem;
 }
 
-#post-detail .content {
-  white-space: pre-wrap;
+/* Markdown body styles */
+.markdown-body {
   line-height: 1.8;
+}
+
+.markdown-body h1 {
+  font-size: 1.75rem;
+  margin: 1.5rem 0 0.75rem;
+  padding-bottom: 0.3rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.markdown-body h2 {
+  font-size: 1.5rem;
+  margin: 1.5rem 0 0.75rem;
+  padding-bottom: 0.3rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.markdown-body h3 {
+  font-size: 1.25rem;
+  margin: 1.25rem 0 0.5rem;
+}
+
+.markdown-body h4 {
+  font-size: 1.1rem;
+  margin: 1rem 0 0.5rem;
+}
+
+.markdown-body h5,
+.markdown-body h6 {
+  font-size: 1rem;
+  margin: 1rem 0 0.5rem;
+}
+
+.markdown-body p {
+  margin: 0.75rem 0;
+}
+
+.markdown-body strong {
+  font-weight: 700;
+}
+
+.markdown-body em {
+  font-style: italic;
+}
+
+.markdown-body del {
+  text-decoration: line-through;
+  color: var(--text-secondary);
+}
+
+.markdown-body a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.markdown-body a:hover {
+  text-decoration: underline;
+}
+
+.markdown-body code {
+  background: var(--code-bg);
+  color: var(--code-text);
+  padding: 0.15rem 0.4rem;
+  border-radius: 0.25rem;
+  font-family: "SF Mono", "Fira Code", "Fira Mono", Menlo, Consolas, monospace;
+  font-size: 0.875em;
+}
+
+.markdown-body pre {
+  background: var(--code-bg);
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  padding: 1rem;
+  overflow-x: auto;
+  margin: 1rem 0;
+}
+
+.markdown-body pre code {
+  background: none;
+  color: var(--text);
+  padding: 0;
+  font-size: 0.85rem;
+  line-height: 1.6;
+}
+
+.markdown-body ul,
+.markdown-body ol {
+  margin: 0.75rem 0;
+  padding-left: 1.5rem;
+}
+
+.markdown-body li {
+  margin: 0.25rem 0;
+}
+
+.markdown-body blockquote {
+  border-left: 4px solid var(--blockquote-border);
+  background: var(--blockquote-bg);
+  margin: 1rem 0;
+  padding: 0.75rem 1rem;
+  color: var(--text-secondary);
+  border-radius: 0 0.5rem 0.5rem 0;
+}
+
+.markdown-body hr {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 1.5rem 0;
+}
+
+.markdown-body img {
+  max-width: 100%;
+  border-radius: 0.5rem;
+  margin: 0.5rem 0;
 }
 
 .no-results {
@@ -229,5 +357,10 @@ main {
 
   #post-detail {
     padding: 1.25rem;
+  }
+
+  .markdown-body pre {
+    padding: 0.75rem;
+    font-size: 0.8rem;
   }
 }
